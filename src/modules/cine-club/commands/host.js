@@ -13,12 +13,13 @@ const { requireStreamerRole, requireAnyChannel } = require('../../../core/permis
 const withErrorHandling = require('../../../core/withErrorHandling');
 const store = require('../store');
 const tmdb = require('../tmdb');
-const { prochainLundi21h } = require('../dateUtils');
+const { prochainLundiA } = require('../dateUtils');
 const {
   TYPES_SEANCE_FILM,
   roleIdPourTypeSeance,
   programmerRappels,
   demanderSalonVocal,
+  demanderHeure,
   buildSeanceContainer,
 } = require('../service');
 
@@ -116,8 +117,14 @@ module.exports = {
       const index = Number(clicCreneau.customId.split('_').pop());
       dateSeance = new Date(dernierPoll.creneaux[index].date);
     } else {
-      // Série : pas de sondage d'horaire, date fixée automatiquement.
-      dateSeance = prochainLundi21h();
+      // Série : pas de sondage d'horaire (un seul jour, le lundi), mais
+      // l'heure reste choisie par le streamer comme pour un film.
+      const heureChoisie = await demanderHeure(interaction, message, {
+        defaut: '21h00',
+        label: "l'heure de diffusion (prochain lundi)",
+      });
+      if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
+      dateSeance = prochainLundiA(heureChoisie.heure, heureChoisie.minute);
     }
 
     // --- Étape 3 : rôle à mentionner ---

@@ -10,6 +10,7 @@ const { requireStreamerRole, requireChannel } = require('../../../core/permissio
 const withErrorHandling = require('../../../core/withErrorHandling');
 const store = require('../store');
 const { creneauxFilmSemaineSuivante, formatDateFr } = require('../dateUtils');
+const { demanderHeure } = require('../service');
 
 const NUM_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 const CRENEAU_EMOJIS = ['🇦', '🇧', '🇨'];
@@ -225,6 +226,17 @@ module.exports = {
       if (candidats.length === 0) return; // message d'erreur déjà envoyé par le sélecteur
     }
 
+    // --- Heure de diffusion des 3 créneaux proposés (film uniquement — une
+    // série n'a pas de sondage d'horaire, sa date est fixée par /host) ---
+    let heureChoisie = null;
+    if (type === 'movie') {
+      heureChoisie = await demanderHeure(interaction, message, {
+        defaut: '21h00',
+        label: "l'heure de diffusion pour les 3 créneaux proposés",
+      });
+      if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
+    }
+
     // --- Publication dans le salon ciné-club ---
     const libelleType = type === 'tv' ? 'série' : 'film';
 
@@ -242,7 +254,7 @@ module.exports = {
 
     let creneaux = null;
     if (type === 'movie') {
-      creneaux = creneauxFilmSemaineSuivante();
+      creneaux = creneauxFilmSemaineSuivante(heureChoisie.heure, heureChoisie.minute);
       await posterSondageHoraire(interaction.channel, creneaux);
     }
 

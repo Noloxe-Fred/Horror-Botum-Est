@@ -9,15 +9,21 @@ const { requireStreamerRole, requireAnyChannel } = require('../../../core/permis
 const withErrorHandling = require('../../../core/withErrorHandling');
 const tmdb = require('../tmdb');
 const store = require('../store');
-const { ceSoir21h } = require('../dateUtils');
+const { ceSoirA, parseHeure } = require('../dateUtils');
 const { choisirResultatTmdb, demanderSalonVocal, buildSeanceContainer } = require('../service');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('arrache')
-    .setDescription('Annonce une séance ciné improvisée ce soir à 21h')
+    .setDescription('Annonce une séance ciné improvisée ce soir')
     .addStringOption((option) =>
       option.setName('titre').setDescription('Film à diffuser ce soir').setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('heure')
+        .setDescription('Heure de diffusion ce soir, ex: 21h30 (défaut 21h00)')
+        .setRequired(false)
     ),
 
   execute: withErrorHandling(async (interaction) => {
@@ -30,6 +36,15 @@ module.exports = {
       ))
     )
       return;
+
+    const heureBrute = interaction.options.getString('heure');
+    const heureChoisie = heureBrute ? parseHeure(heureBrute) : { heure: 21, minute: 0 };
+    if (!heureChoisie) {
+      return interaction.reply({
+        content: `❌ Heure invalide ("${heureBrute}"). Utilise un format du type "21h" ou "21h30".`,
+        ephemeral: true,
+      });
+    }
 
     await interaction.deferReply();
 
@@ -48,7 +63,7 @@ module.exports = {
     if (!choisi) return; // message d'erreur/timeout déjà posté par choisirResultatTmdb
 
     const fiche = await tmdb.getDetails(choisi.tmdbId, choisi.mediaType);
-    const dateSeance = ceSoir21h();
+    const dateSeance = ceSoirA(heureChoisie.heure, heureChoisie.minute);
 
     // Salon vocal de diffusion (liste dynamique du serveur, comme /host).
     const salonVocalId = await demanderSalonVocal(interaction, message);

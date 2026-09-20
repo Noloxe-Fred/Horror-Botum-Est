@@ -10,12 +10,15 @@ const {
   TextDisplayBuilder,
   GuildScheduledEventStatus,
   MessageFlags,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
 const config = require('../../config');
 const { requireStreamerRole } = require('../../core/permissions');
 const store = require('./store');
 const tmdb = require('./tmdb');
-const { formatDateFr } = require('./dateUtils');
+const { formatDateFr, parseHeure } = require('./dateUtils');
 
 const COULEUR_FILM = 0xb8002e; // rouge horreur, cohérent avec le thème du serveur
 const COULEUR_SERIE = 0x1f8a70;
@@ -272,6 +275,75 @@ async function demanderSalonVocal(interaction, message) {
 }
 
 /**
+ * Demande au streamer l'heure de diffusion via un bouton qui ouvre une
+ * modale (un select menu ne permet pas la saisie libre nécessaire ici).
+ * Réutilisé par /poll (créneaux film) et /host (séance série).
+ *
+ * Renvoie { heure, minute }, ou `null` en cas d'annulation/timeout/format
+ * invalide (message d'erreur déjà posté dans `message`, l'appelant doit
+ * juste s'arrêter).
+ */
+async function demanderHeure(interaction, message, { defaut = '21h00', label = "l'heure de diffusion" } = {}) {
+  const boutonId = 'heure_ouvrir_modal';
+
+  await message.edit({
+    content: `Choisis ${label} (${defaut} si tu ne changes rien).`,
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(boutonId).setLabel('🕒 Définir l\'heure').setStyle(ButtonStyle.Primary)
+      ),
+    ],
+  });
+
+  let clicOuverture;
+  try {
+    clicOuverture = await message.awaitMessageComponent({
+      filter: (i) => i.user.id === interaction.user.id && i.customId === boutonId,
+      time: 120_000,
+    });
+  } catch {
+    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    return null;
+  }
+
+  const modal = new ModalBuilder().setCustomId('heure_modal').setTitle('Heure de diffusion');
+  const input = new TextInputBuilder()
+    .setCustomId('heure_valeur')
+    .setLabel('Heure (ex: 21h, 21h30, 20:00)')
+    .setStyle(TextInputStyle.Short)
+    .setValue(defaut)
+    .setRequired(true)
+    .setMaxLength(5);
+  modal.addComponents(new ActionRowBuilder().addComponents(input));
+  await clicOuverture.showModal(modal);
+
+  let soumission;
+  try {
+    soumission = await clicOuverture.awaitModalSubmit({
+      filter: (i) => i.user.id === interaction.user.id && i.customId === 'heure_modal',
+      time: 120_000,
+    });
+  } catch {
+    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    return null;
+  }
+
+  const brut = soumission.fields.getTextInputValue('heure_valeur');
+  const heureParsee = parseHeure(brut);
+  await soumission.deferUpdate();
+
+  if (!heureParsee) {
+    await message.edit({
+      content: `❌ Heure invalide ("${brut}"), commande annulée. Utilise un format du type "21h" ou "21h30".`,
+      components: [],
+    });
+    return null;
+  }
+
+  return heureParsee;
+}
+
+/**
  * Vérifie si un titre est déjà dans la watchlist active.
  * Retourne l'entrée existante (ou null).
  */
@@ -465,6 +537,7 @@ module.exports = {
   buildListeContainer,
   prependTextDisplay,
   demanderSalonVocal,
+  demanderHeure,
   choisirResultatTmdb,
   doublonWatchlist,
   doublonHistorique,

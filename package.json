@@ -1,0 +1,23 @@
+{
+  "name": "horror-botum-est",
+  "version": "2.0.0",
+  "description": "Bot Discord pour le serveur Horror Humanum Est",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node -e \"require('./src/core/deployCommands')()\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.3",
+    "jimp": "^0.22.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

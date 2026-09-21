@@ -23,7 +23,7 @@ function loadModules() {
  * `buttons` sert aux boutons dont le customId doit rester cliquable après un
  * redémarrage du bot (ex: "Je serai présent" sur une annonce postée il y a
  * plusieurs jours) — contrairement aux boutons éphémères des formulaires de
- * commande (/poll, /host...), qui s'auto-gèrent via awaitMessageComponent()
+ * commande (/cine...), qui s'auto-gèrent via awaitMessageComponent()
  * et n'ont pas besoin de passer par ce registre. Convention de customId :
  * `<prefix>:<reste>` (ex: `cine_presence:movie:123:456`) — le préfixe avant
  * le premier `:` sert de clé de dispatch en O(1).

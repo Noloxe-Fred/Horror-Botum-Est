@@ -2,7 +2,7 @@ const jsonStore = require('../../data/jsonStore');
 
 const NS_WATCHLIST = 'cine-club-watchlist';
 const NS_HISTORIQUE = 'cine-club-historique';
-const NS_DERNIER_POLL = 'cine-club-dernier-poll';
+const NS_POLLS_EN_ATTENTE = 'cine-club-polls-en-attente';
 const NS_SERIE_COURANTE = 'cine-club-serie-courante';
 const NS_REMINDERS = 'cine-club-reminders';
 const NS_ANNONCES = 'cine-club-annonces';
@@ -71,19 +71,35 @@ function listHistorique({ limit = 15 } = {}) {
   return [...entries].sort((a, b) => new Date(b.dateVu) - new Date(a.dateVu)).slice(0, limit);
 }
 
-// --- Dernier /poll (pont vers /host) ----------------------------------
+// --- Sondages en attente de validation (pont vers le bouton "Valider
+// séance") --------------------------------------------------------------
+//
+// Contrairement à l'ancien /poll -> /host (un seul "dernier poll" en
+// mémoire), le bouton "Valider séance" est persistant et peut rester
+// cliquable plusieurs jours (le temps du dépouillement des réactions) —
+// plusieurs sondages pourraient donc coexister. Chacun est identifié par un
+// id embarqué dans le customId du bouton (`cine_valider:<id>`).
 
-function getDernierPoll() {
-  return jsonStore.read(NS_DERNIER_POLL, null);
+function getPollsEnAttente() {
+  return jsonStore.read(NS_POLLS_EN_ATTENTE, {});
 }
 
-function setDernierPoll(poll) {
-  jsonStore.write(NS_DERNIER_POLL, poll);
-  return poll;
+function creerPollEnAttente(poll) {
+  const id = String(Date.now());
+  const all = getPollsEnAttente();
+  all[id] = poll;
+  jsonStore.write(NS_POLLS_EN_ATTENTE, all);
+  return id;
 }
 
-function clearDernierPoll() {
-  jsonStore.write(NS_DERNIER_POLL, null);
+function getPollEnAttente(id) {
+  return getPollsEnAttente()[id] || null;
+}
+
+function clearPollEnAttente(id) {
+  const all = getPollsEnAttente();
+  delete all[id];
+  jsonStore.write(NS_POLLS_EN_ATTENTE, all);
 }
 
 // --- Série en cours ----------------------------------------------------
@@ -197,10 +213,10 @@ module.exports = {
   findInHistorique,
   addToHistorique,
   listHistorique,
-  // dernier poll
-  getDernierPoll,
-  setDernierPoll,
-  clearDernierPoll,
+  // sondages en attente de validation
+  creerPollEnAttente,
+  getPollEnAttente,
+  clearPollEnAttente,
   // série en cours
   getSerieCourante,
   setSerieCourante,

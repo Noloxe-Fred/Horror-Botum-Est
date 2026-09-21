@@ -30,8 +30,11 @@ obligatoires, le reste optionnel (le bot démarre avec des warnings si absent).
   persistant si besoin), `commands/*.js`.
 
 Modules existants : `moderation` (purge/addpurge), `quiz` (quiz-affiche-floutée,
-pixélisation Jimp + TMDB), `cine-club` (poll/host/arrache/etc, intégration
-TMDB), `forbidden-word` (stub vide, pas encore implémenté).
+pixélisation Jimp + TMDB), `cine-club` (commande unique `/cine` — formulaire à
+boutons vers 4 branches : Séances Séries, Séance à l'arrache, Séance 48h,
+Séances Ciné semaine suivante ; logique de chaque branche dans
+`src/modules/cine-club/wizards/`, intégration TMDB), `forbidden-word` (stub
+vide, pas encore implémenté).
 
 ## Conventions
 - Dossiers de modules en kebab-case (contrainte shell/CLI).

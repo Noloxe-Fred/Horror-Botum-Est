@@ -22,23 +22,14 @@ const COMMANDES = [
     description: 'Liste la watchlist, avec filtres type/genre et tri (récent, note, durée).',
   },
   {
-    nom: '/poll',
+    nom: '/cine',
     acces: 'Rôle streamer, salon ciné-club uniquement',
     description:
-      'Lance le formulaire de sondage (film ou série, aléatoire/manuel/direct) pour choisir ' +
-      'la prochaine séance.',
-  },
-  {
-    nom: '/host',
-    acces: 'Rôle streamer, salon ciné-club uniquement',
-    description:
-      "Finalise la séance à partir du dernier /poll : titre gagnant, créneau, salon vocal, " +
-      "puis poste l'annonce (salon ciné-club pour un film, salon dédié pour une série) et programme les rappels.",
-  },
-  {
-    nom: '/arrache titre',
-    acces: 'Rôle streamer, salon ciné-club uniquement',
-    description: "Annonce une séance improvisée pour ce soir 21h dans son salon dédié, sans sondage ni planification.",
+      'Point d\'entrée unique pour organiser une séance, avec 4 branches : Séances Séries ' +
+      '(recherche TMDB, séance lundi prochain), Séance à l\'arrache (ce soir), Séance 48h ' +
+      '(surlendemain, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
+      'suivante (sondage films mardi/vendredi/samedi, puis bouton "Valider séance" réservé ' +
+      'admin/rôle streamer pour finaliser et créer l\'event).',
   },
   {
     nom: '/serie-en-cours',
@@ -63,8 +54,8 @@ module.exports = {
     container.addTextDisplayComponents((t) =>
       t.setContent(
         '# 🎬 Commandes du Ciné-Club\n' +
-          'Watchlist ouverte à tout le monde. `/poll`, `/host` et `/arrache` sont réservées ' +
-          'au rôle streamer et au salon ciné-club dédié.'
+          'Watchlist ouverte à tout le monde. `/cine` est réservée au rôle streamer ' +
+          'et au salon ciné-club dédié.'
       )
     );
 

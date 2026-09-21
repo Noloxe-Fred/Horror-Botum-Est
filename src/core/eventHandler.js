@@ -34,7 +34,7 @@ module.exports = (client) => {
 
     // Boutons persistants (ex: "Je serai présent") : dispatch par préfixe de
     // customId ("cine_presence:xyz" -> "cine_presence"). Les boutons de
-    // formulaire éphémères (/poll, /host...) sont gérés directement par
+    // formulaire éphémères (/cine...) sont gérés directement par
     // awaitMessageComponent() dans leur commande et n'arrivent jamais ici
     // sans handler correspondant — dans ce cas on ignore silencieusement
     // (bouton expiré ou déjà consommé par le collector de la commande).

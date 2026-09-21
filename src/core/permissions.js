@@ -73,36 +73,6 @@ async function requireChannel(interaction, channelId, { label = 'le salon dédi�
 }
 
 /**
- * Vérifie que la commande est lancée dans l'un des salons fournis (par ID).
- * Générique — utile quand plusieurs salons distincts doivent chacun donner
- * accès à une même commande (ex: salon ciné-club principal OU salon dédié
- * "séances à l'arrache" pour /arrache), contrairement à requireChannel qui
- * ne teste qu'un seul salon précis.
- */
-async function requireAnyChannel(interaction, channelIds = [], { label = 'un salon autorisé' } = {}) {
-  const idsValides = channelIds.filter(Boolean);
-
-  if (idsValides.length === 0) {
-    await interaction.reply({
-      content: '❌ Aucun salon autorisé n\'est configuré dans .env pour cette commande.',
-      ephemeral: true,
-    });
-    return false;
-  }
-
-  if (!idsValides.includes(interaction.channel.id)) {
-    const liste = idsValides.map((id) => `<#${id}>`).join(' ou ');
-    await interaction.reply({
-      content: `❌ Cette commande ne peut être utilisée que dans ${label} (${liste}).`,
-      ephemeral: true,
-    });
-    return false;
-  }
-
-  return true;
-}
-
-/**
  * Vérifie que l'utilisateur possède au moins un des rôles fournis (ou est
  * administrateur du serveur, toujours autorisé par défaut). Générique —
  * utile quand plusieurs rôles distincts doivent chacun donner accès à une
@@ -139,6 +109,5 @@ module.exports = {
   requireAdmin,
   requireStreamerRole,
   requireChannel,
-  requireAnyChannel,
   requireAnyRole,
 };

@@ -21,7 +21,8 @@ module.exports = {
     const lignes = entrees.map((e) => {
       const emoji = e.mediaType === 'tv' ? '📺' : '🎬';
       const date = new Date(e.dateVu).toLocaleDateString('fr-FR');
-      const origine = e.source === 'arrache' ? ' _(à l\'arrache)_' : '';
+      const origine =
+        e.source === 'arrache' ? ' _(à l\'arrache)_' : e.source === '48h' ? ' _(séance 48h)_' : '';
       return `${emoji} **${e.titre}** — vu le ${date}${origine}`;
     });
 

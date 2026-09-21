@@ -93,8 +93,8 @@ module.exports = {
   cineClub: {
     channelId: process.env.CINE_CLUB_CHANNEL_ID || null,
     // Salons d'annonce dédiés : si non configurés, on retombe sur channelId
-    // (comportement d'origine). channelId reste aussi le salon où les
-    // commandes /poll, /host, /arrache doivent être lancées (requireChannel).
+    // (comportement d'origine). channelId reste aussi le salon où /cine doit
+    // être lancée (requireChannel).
     channelArracheId: process.env.CINE_CLUB_CHANNEL_ARRACHE_ID || null,
     channelSerieId: process.env.CINE_CLUB_CHANNEL_SERIE_ID || null,
     streamerRoleId: process.env.CINE_CLUB_STREAMER_ROLE_ID || null,

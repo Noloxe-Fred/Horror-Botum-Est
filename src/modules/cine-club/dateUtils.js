@@ -84,12 +84,20 @@ function prochainLundiA(heure, minute = 0, from = new Date()) {
 }
 
 /**
- * Heure choisie le jour même de `from` (utilisé par /arrache). Si `from`
- * est déjà après cette heure, on garde quand même le jour même (séance à
- * l'arrache = ce soir).
+ * Heure choisie le jour même de `from` (utilisé par la séance "à l'arrache").
+ * Si `from` est déjà après cette heure, on garde quand même le jour même
+ * (séance à l'arrache = ce soir).
  */
 function ceSoirA(heure, minute = 0, from = new Date()) {
   return atHeure(from, heure, minute);
+}
+
+/**
+ * Heure choisie le surlendemain de `from` (utilisé par la séance "48h") —
+ * toujours dans 2 jours calendaires, peu importe l'heure actuelle.
+ */
+function dansDeuxJoursA(heure, minute = 0, from = new Date()) {
+  return atHeure(new Date(from.getTime() + 2 * DAY_MS), heure, minute);
 }
 
 function formatDateFr(date) {
@@ -109,5 +117,6 @@ module.exports = {
   creneauxFilmSemaineSuivante,
   prochainLundiA,
   ceSoirA,
+  dansDeuxJoursA,
   formatDateFr,
 };

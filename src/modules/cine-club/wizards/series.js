@@ -26,14 +26,14 @@ const {
  * de la modale de recherche — il ne doit pas avoir été deferUpdate() avant.
  */
 async function runSeriesWizard(interaction, clicBouton, message) {
-  const titre = await demanderTitreTmdb(clicBouton, message, { label: 'Série à diffuser lundi prochain' });
+  const titre = await demanderTitreTmdb(interaction, clicBouton, message, { label: 'Série à diffuser lundi prochain' });
   if (!titre) return;
 
-  await message.edit({ content: 'Recherche en cours...', components: [] });
+  await interaction.editReply({ content: 'Recherche en cours...', components: [] });
 
   const resultats = await tmdb.searchMulti(titre, { limit: 10 });
   if (resultats.length === 0) {
-    return message.edit({ content: `❌ Aucun résultat TMDB pour "${titre}".`, components: [] });
+    return interaction.editReply({ content: `❌ Aucun résultat TMDB pour "${titre}".`, components: [] });
   }
 
   const choisi = await choisirResultatTmdb(interaction, message, resultats);
@@ -57,7 +57,7 @@ async function runSeriesWizard(interaction, clicBouton, message) {
   const targetChannelId = config.cineClub.channelSerieId || config.cineClub.channelId;
   const salonAnnonce = await interaction.guild.channels.fetch(targetChannelId);
   if (!salonAnnonce) {
-    return message.edit({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
+    return interaction.editReply({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
   }
 
   const fiche = await tmdb.getDetails(choisi.tmdbId, choisi.mediaType);
@@ -137,7 +137,7 @@ async function runSeriesWizard(interaction, clicBouton, message) {
     sessionKey,
   });
 
-  await message.edit({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
+  await interaction.editReply({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
 }
 
 module.exports = { runSeriesWizard };

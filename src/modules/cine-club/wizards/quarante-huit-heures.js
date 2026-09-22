@@ -32,7 +32,7 @@ const {
  * Courts Métrages) choisis par le streamer, comme /host.
  */
 async function run48hWizard(interaction, message) {
-  await message.edit({
+  await interaction.editReply({
     content: '🕑 **Séance 48h** — comment choisir le film ?',
     components: [
       new ActionRowBuilder().addComponents(
@@ -46,7 +46,7 @@ async function run48hWizard(interaction, message) {
   try {
     clicSource = await attendreClic(message, interaction.user.id, ['cine48_source_watchlist', 'cine48_source_tmdb']);
   } catch {
-    return message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
   }
 
   let elu; // { tmdbId, mediaType }
@@ -60,13 +60,13 @@ async function run48hWizard(interaction, message) {
   } else {
     // Recherche TMDB : la modale doit être la toute première réponse à ce
     // clic, donc pas de deferUpdate() avant demanderTitreTmdb().
-    const titre = await demanderTitreTmdb(clicSource, message, { label: 'Film à diffuser dans 2 jours' });
+    const titre = await demanderTitreTmdb(interaction, clicSource, message, { label: 'Film à diffuser dans 2 jours' });
     if (!titre) return;
 
-    await message.edit({ content: 'Recherche en cours...', components: [] });
+    await interaction.editReply({ content: 'Recherche en cours...', components: [] });
     const resultats = await tmdb.searchMulti(titre, { limit: 10 });
     if (resultats.length === 0) {
-      return message.edit({ content: `❌ Aucun résultat TMDB pour "${titre}".`, components: [] });
+      return interaction.editReply({ content: `❌ Aucun résultat TMDB pour "${titre}".`, components: [] });
     }
     const choisi = await choisirResultatTmdb(interaction, message, resultats);
     if (!choisi) return; // message d'erreur/timeout déjà posté par choisirResultatTmdb
@@ -85,7 +85,7 @@ async function run48hWizard(interaction, message) {
     .setPlaceholder('Type de séance')
     .addOptions(TYPES_SEANCE_FILM.map((t) => ({ label: t.label, value: t.id })));
 
-  await message.edit({
+  await interaction.editReply({
     content: 'Quel type de séance ?',
     components: [new ActionRowBuilder().addComponents(selectRole)],
   });
@@ -94,7 +94,7 @@ async function run48hWizard(interaction, message) {
   try {
     clicRole = await attendreClic(message, interaction.user.id, ['cine48_role']);
   } catch {
-    return message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
   }
   await clicRole.deferUpdate();
   const roleId = roleIdPourTypeSeance(clicRole.values[0]);
@@ -110,7 +110,7 @@ async function run48hWizard(interaction, message) {
   const targetChannelId = config.cineClub.channelId;
   const salonAnnonce = await interaction.guild.channels.fetch(targetChannelId);
   if (!salonAnnonce) {
-    return message.edit({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
+    return interaction.editReply({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
   }
 
   const fiche = await tmdb.getDetails(elu.tmdbId, elu.mediaType);
@@ -179,7 +179,7 @@ async function run48hWizard(interaction, message) {
     source: '48h',
   });
 
-  await message.edit({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
+  await interaction.editReply({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
 }
 
 module.exports = { run48hWizard };

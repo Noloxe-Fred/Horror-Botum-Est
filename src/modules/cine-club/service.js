@@ -213,7 +213,7 @@ async function choisirResultatTmdb(interaction, message, resultats) {
     .setPlaceholder('Plusieurs résultats trouvés, choisis le bon titre')
     .addOptions(options);
 
-  await message.edit({
+  await interaction.editReply({
     content: `🔎 ${resultats.length} résultats trouvés pour cette recherche — lequel ?`,
     embeds: [],
     components: [new ActionRowBuilder().addComponents(select)],
@@ -227,7 +227,7 @@ async function choisirResultatTmdb(interaction, message, resultats) {
     await choix.deferUpdate();
     return resultats[Number(choix.values[0])];
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, aucun titre choisi.', embeds: [], components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, aucun titre choisi.', embeds: [], components: [] });
     return null;
   }
 }
@@ -247,7 +247,7 @@ async function demanderSalonVocal(interaction, message) {
     .slice(0, 25);
 
   if (salons.length === 0) {
-    await message.edit({ content: '❌ Aucun salon vocal trouvé sur ce serveur.', components: [] });
+    await interaction.editReply({ content: '❌ Aucun salon vocal trouvé sur ce serveur.', components: [] });
     return null;
   }
 
@@ -258,7 +258,7 @@ async function demanderSalonVocal(interaction, message) {
     .setPlaceholder('Choisis le salon vocal de diffusion')
     .addOptions(salons);
 
-  await message.edit({
+  await interaction.editReply({
     content: 'Quel salon vocal pour la diffusion ?',
     components: [new ActionRowBuilder().addComponents(select)],
   });
@@ -271,7 +271,7 @@ async function demanderSalonVocal(interaction, message) {
     await choix.deferUpdate();
     return choix.values[0];
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 }
@@ -288,7 +288,7 @@ async function demanderSalonVocal(interaction, message) {
 async function demanderHeure(interaction, message, { defaut = '21h00', label = "l'heure de diffusion" } = {}) {
   const boutonId = 'heure_ouvrir_modal';
 
-  await message.edit({
+  await interaction.editReply({
     content: `Choisis ${label} (${defaut} si tu ne changes rien).`,
     components: [
       new ActionRowBuilder().addComponents(
@@ -304,7 +304,7 @@ async function demanderHeure(interaction, message, { defaut = '21h00', label = "
       time: 120_000,
     });
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 
@@ -326,7 +326,7 @@ async function demanderHeure(interaction, message, { defaut = '21h00', label = "
       time: 120_000,
     });
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 
@@ -335,7 +335,7 @@ async function demanderHeure(interaction, message, { defaut = '21h00', label = "
   await soumission.deferUpdate();
 
   if (!heureParsee) {
-    await message.edit({
+    await interaction.editReply({
       content: `❌ Heure invalide ("${brut}"), commande annulée. Utilise un format du type "21h" ou "21h30".`,
       components: [],
     });
@@ -357,7 +357,7 @@ async function demanderHeure(interaction, message, { defaut = '21h00', label = "
 async function demanderMessagePersonnalise(interaction, message, { defaut }) {
   const boutonId = 'message_ouvrir_modal';
 
-  await message.edit({
+  await interaction.editReply({
     content: "Un message personnalisé pour l'annonce ? (laisse tel quel pour garder le message par défaut)",
     components: [
       new ActionRowBuilder().addComponents(
@@ -373,7 +373,7 @@ async function demanderMessagePersonnalise(interaction, message, { defaut }) {
       time: 120_000,
     });
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 
@@ -395,7 +395,7 @@ async function demanderMessagePersonnalise(interaction, message, { defaut }) {
       time: 120_000,
     });
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 
@@ -450,7 +450,7 @@ function construireRowPagination(page, totalPages) {
  */
 async function selectionnerDansWatchlist(interaction, message, entrees, { multi }) {
   if (entrees.length === 0) {
-    await message.edit({ content: '❌ La watchlist est vide pour ce type de contenu.', components: [] });
+    await interaction.editReply({ content: '❌ La watchlist est vide pour ce type de contenu.', components: [] });
     return [];
   }
 
@@ -484,7 +484,7 @@ async function selectionnerDansWatchlist(interaction, message, entrees, { multi 
       );
     }
 
-    await message.edit({
+    await interaction.editReply({
       content:
         `Page ${page + 1}/${totalPages}` +
         (multi ? ` — ${selection.size} titre(s) sélectionné(s) au total.` : ''),
@@ -499,7 +499,7 @@ async function selectionnerDansWatchlist(interaction, message, entrees, { multi 
     try {
       interactionComposant = await attendreClic(message, interaction.user.id, customIds);
     } catch {
-      await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+      await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
       return [];
     }
 
@@ -561,7 +561,7 @@ async function posterSondageHoraire(channel, creneaux) {
  * Renvoie la chaîne saisie, ou `null` en cas d'annulation/timeout (message
  * d'erreur déjà posté dans `message`, l'appelant doit juste s'arrêter).
  */
-async function demanderTitreTmdb(clicBouton, message, { label = 'Titre à rechercher' } = {}) {
+async function demanderTitreTmdb(interaction, clicBouton, message, { label = 'Titre à rechercher' } = {}) {
   const modal = new ModalBuilder().setCustomId('titre_modal').setTitle('Recherche TMDB');
   const input = new TextInputBuilder()
     .setCustomId('titre_valeur')
@@ -579,7 +579,7 @@ async function demanderTitreTmdb(clicBouton, message, { label = 'Titre à recher
       time: 120_000,
     });
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 
@@ -587,7 +587,7 @@ async function demanderTitreTmdb(clicBouton, message, { label = 'Titre à recher
   await soumission.deferUpdate();
 
   if (!titre) {
-    await message.edit({ content: '❌ Titre vide, commande annulée.', components: [] });
+    await interaction.editReply({ content: '❌ Titre vide, commande annulée.', components: [] });
     return null;
   }
 
@@ -774,14 +774,14 @@ async function handleValiderSeanceButton(interaction) {
 
   // --- Étape 2 : créneau de la séance ---
   if (!poll.creneaux || poll.creneaux.length === 0) {
-    return message.edit('❌ Aucun créneau d\'horaire enregistré pour ce sondage.');
+    return interaction.editReply('❌ Aucun créneau d\'horaire enregistré pour ce sondage.');
   }
   const row = new ActionRowBuilder().addComponents(
     poll.creneaux.map((c, i) =>
       new ButtonBuilder().setCustomId(`host_creneau_${i}`).setLabel(c.label).setStyle(ButtonStyle.Primary)
     )
   );
-  await message.edit({ content: 'Quel créneau a gagné le sondage d\'horaire ?', components: [row] });
+  await interaction.editReply({ content: 'Quel créneau a gagné le sondage d\'horaire ?', components: [row] });
 
   let clicCreneau;
   try {
@@ -791,7 +791,7 @@ async function handleValiderSeanceButton(interaction) {
       poll.creneaux.map((_, i) => `host_creneau_${i}`)
     );
   } catch {
-    return message.edit({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
+    return interaction.editReply({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
   }
   await clicCreneau.deferUpdate();
   const index = Number(clicCreneau.customId.split('_').pop());
@@ -803,7 +803,7 @@ async function handleValiderSeanceButton(interaction) {
     .setPlaceholder('Type de séance')
     .addOptions(TYPES_SEANCE_FILM.map((t) => ({ label: t.label, value: t.id })));
 
-  await message.edit({
+  await interaction.editReply({
     content: 'Quel type de séance ?',
     components: [new ActionRowBuilder().addComponents(select)],
   });
@@ -812,7 +812,7 @@ async function handleValiderSeanceButton(interaction) {
   try {
     clicRole = await attendreClic(message, interaction.user.id, ['host_role']);
   } catch {
-    return message.edit({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
+    return interaction.editReply({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
   }
   await clicRole.deferUpdate();
   const roleId = roleIdPourTypeSeance(clicRole.values[0]);
@@ -824,7 +824,7 @@ async function handleValiderSeanceButton(interaction) {
   const targetChannelId = config.cineClub.channelId;
   const salonAnnonce = await interaction.guild.channels.fetch(targetChannelId);
   if (!salonAnnonce) {
-    return message.edit({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
+    return interaction.editReply({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
   }
 
   // --- Étape 5 : message personnalisé de l'annonce ---
@@ -916,7 +916,7 @@ async function handleValiderSeanceButton(interaction) {
     console.error('[CINE-CLUB] Impossible de mettre à jour le message de sondage :', err);
   }
 
-  await message.edit({ content: `✅ Séance programmée et annoncée dans <#${targetChannelId}> !`, components: [] });
+  await interaction.editReply({ content: `✅ Séance programmée et annoncée dans <#${targetChannelId}> !`, components: [] });
 }
 
 /**

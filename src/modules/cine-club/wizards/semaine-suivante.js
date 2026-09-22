@@ -16,7 +16,7 @@ const {
  * sondage(s), puis pose le bouton persistant "Valider séance".
  */
 async function runSemaineSuivanteWizard(interaction, message) {
-  await message.edit({
+  await interaction.editReply({
     content: '🎬 **Séances Ciné semaine suivante** — quel mode de sélection ?',
     components: [
       new ActionRowBuilder().addComponents(
@@ -31,7 +31,7 @@ async function runSemaineSuivanteWizard(interaction, message) {
   try {
     clicMode = await attendreClic(message, interaction.user.id, ['cine_mode_random', 'cine_mode_manual', 'cine_mode_direct']);
   } catch {
-    return message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
   }
   await clicMode.deferUpdate();
   const mode = clicMode.customId.replace('cine_mode_', '');
@@ -41,14 +41,14 @@ async function runSemaineSuivanteWizard(interaction, message) {
 
   if (mode === 'random') {
     if (watchlist.length < 2) {
-      return message.edit({ content: '❌ Pas assez de films dans la watchlist (minimum 2).', components: [] });
+      return interaction.editReply({ content: '❌ Pas assez de films dans la watchlist (minimum 2).', components: [] });
     }
     const nb = Math.min(watchlist.length, Math.floor(Math.random() * 6) + 5); // 5 à 10
     candidats = [...watchlist].sort(() => Math.random() - 0.5).slice(0, nb);
   } else if (mode === 'manual') {
     candidats = await selectionnerDansWatchlist(interaction, message, watchlist, { multi: true });
     if (candidats.length < 2) {
-      return message.edit({ content: '❌ Il faut sélectionner au moins 2 titres pour un sondage.', components: [] });
+      return interaction.editReply({ content: '❌ Il faut sélectionner au moins 2 titres pour un sondage.', components: [] });
     }
   } else {
     candidats = await selectionnerDansWatchlist(interaction, message, watchlist, { multi: false });
@@ -96,7 +96,7 @@ async function runSemaineSuivanteWizard(interaction, message) {
     ],
   });
 
-  await message.edit({
+  await interaction.editReply({
     content: `✅ Sondage(s) publié(s) dans <#${interaction.channel.id}> ! Utilise le bouton "Valider séance" une fois le dépouillement fait.`,
     components: [],
   });

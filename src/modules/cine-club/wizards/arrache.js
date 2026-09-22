@@ -24,7 +24,7 @@ const {
  * déclenche l'ouverture — une modale doit être la toute première réponse à
  * son interaction, donc ce clic ne doit pas avoir été deferUpdate() avant.
  */
-async function demanderTitreEtHeure(clicBouton, message) {
+async function demanderTitreEtHeure(interaction, clicBouton, message) {
   const modal = new ModalBuilder().setCustomId('arrache_modal').setTitle("Séance à l'arrache");
   const titreInput = new TextInputBuilder()
     .setCustomId('arrache_titre')
@@ -52,7 +52,7 @@ async function demanderTitreEtHeure(clicBouton, message) {
       time: 120_000,
     });
   } catch {
-    await message.edit({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
     return null;
   }
 
@@ -62,7 +62,7 @@ async function demanderTitreEtHeure(clicBouton, message) {
 
   const heureChoisie = parseHeure(heureBrute);
   if (!heureChoisie) {
-    await message.edit({
+    await interaction.editReply({
       content: `❌ Heure invalide ("${heureBrute}"), commande annulée. Utilise un format du type "21h" ou "21h30".`,
       components: [],
     });
@@ -78,15 +78,15 @@ async function demanderTitreEtHeure(clicBouton, message) {
  * programmé.
  */
 async function runArracheWizard(interaction, clicBouton, message) {
-  const saisie = await demanderTitreEtHeure(clicBouton, message);
+  const saisie = await demanderTitreEtHeure(interaction, clicBouton, message);
   if (!saisie) return;
   const { titre, heureChoisie } = saisie;
 
-  await message.edit({ content: 'Recherche en cours...', components: [] });
+  await interaction.editReply({ content: 'Recherche en cours...', components: [] });
 
   const resultats = await tmdb.searchMulti(titre, { limit: 10 });
   if (resultats.length === 0) {
-    return message.edit({ content: `❌ Aucun résultat TMDB pour "${titre}".`, components: [] });
+    return interaction.editReply({ content: `❌ Aucun résultat TMDB pour "${titre}".`, components: [] });
   }
 
   const choisi = await choisirResultatTmdb(interaction, message, resultats);
@@ -106,7 +106,7 @@ async function runArracheWizard(interaction, clicBouton, message) {
   const targetChannelId = config.cineClub.channelArracheId || config.cineClub.channelId;
   const salonAnnonce = await interaction.guild.channels.fetch(targetChannelId);
   if (!salonAnnonce) {
-    return message.edit({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
+    return interaction.editReply({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
   }
 
   let eventId = null;
@@ -170,7 +170,7 @@ async function runArracheWizard(interaction, clicBouton, message) {
     source: 'arrache',
   });
 
-  await message.edit({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
+  await interaction.editReply({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
 }
 
 module.exports = { runArracheWizard };

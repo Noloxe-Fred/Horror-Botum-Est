@@ -87,7 +87,7 @@ function getPollsEnAttente() {
 function creerPollEnAttente(poll) {
   const id = String(Date.now());
   const all = getPollsEnAttente();
-  all[id] = poll;
+  all[id] = { votesCreneaux: {}, ...poll };
   jsonStore.write(NS_POLLS_EN_ATTENTE, all);
   return id;
 }
@@ -100,6 +100,26 @@ function clearPollEnAttente(id) {
   const all = getPollsEnAttente();
   delete all[id];
   jsonStore.write(NS_POLLS_EN_ATTENTE, all);
+}
+
+/**
+ * Bascule le vote de créneau d'un utilisateur sur le sondage de date public
+ * (customId `cine_vote_creneau:<pollId>:<index>`) — un seul vote actif par
+ * utilisateur : cliquer sur le créneau déjà voté le retire, cliquer sur un
+ * autre le déplace. Renvoie le poll à jour, ou `null` s'il est introuvable
+ * (sondage expiré/déjà validé).
+ */
+function voterCreneau(pollId, index, userId) {
+  const all = getPollsEnAttente();
+  const poll = all[pollId];
+  if (!poll) return null;
+
+  if (!poll.votesCreneaux) poll.votesCreneaux = {};
+  if (poll.votesCreneaux[userId] === index) delete poll.votesCreneaux[userId];
+  else poll.votesCreneaux[userId] = index;
+
+  jsonStore.write(NS_POLLS_EN_ATTENTE, all);
+  return poll;
 }
 
 // --- Série en cours ----------------------------------------------------
@@ -217,6 +237,7 @@ module.exports = {
   creerPollEnAttente,
   getPollEnAttente,
   clearPollEnAttente,
+  voterCreneau,
   // série en cours
   getSerieCourante,
   setSerieCourante,

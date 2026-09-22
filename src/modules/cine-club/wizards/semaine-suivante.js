@@ -4,16 +4,17 @@ const { creneauxFilmSemaineSuivante } = require('../dateUtils');
 const {
   attendreClic,
   selectionnerDansWatchlist,
-  posterSondageReactions,
-  posterSondageHoraire,
+  posterFichesCandidats,
+  posterSondageDate,
   demanderHeure,
 } = require('../service');
 
 /**
  * Branche "Séances Ciné semaine suivante" de /cine — reprend l'ancien
  * tandem /poll (type film) + /host : choix du mode de sélection, choix de
- * l'heure pour les 3 créneaux (mardi/vendredi/samedi), publication du(des)
- * sondage(s), puis pose le bouton persistant "Valider séance".
+ * l'heure pour les 3 créneaux (mardi/vendredi/samedi), publication des
+ * fiches candidat(s) + du sondage de date à boutons (comptage automatique),
+ * puis pose le bouton persistant "Valider (streamer)".
  */
 async function runSemaineSuivanteWizard(interaction, message) {
   await interaction.editReply({
@@ -61,16 +62,8 @@ async function runSemaineSuivanteWizard(interaction, message) {
   });
   if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
 
-  if (mode === 'direct') {
-    await interaction.channel.send(`🎯 **Sélection directe** — la prochaine séance film sera : **${candidats[0].titre}** !`);
-  } else {
-    await posterSondageReactions(interaction.channel, 'Sondage film — vote pour la prochaine séance !', candidats);
-  }
-
   const creneaux = creneauxFilmSemaineSuivante(heureChoisie.heure, heureChoisie.minute);
-  await posterSondageHoraire(interaction.channel, creneaux);
-
-  const pollId = store.creerPollEnAttente({
+  const donneesPoll = {
     type: 'movie',
     mode,
     titresCandidats: candidats.map((c) => ({
@@ -83,7 +76,14 @@ async function runSemaineSuivanteWizard(interaction, message) {
     })),
     creneaux: creneaux.map((c) => ({ label: c.label, date: c.date.toISOString() })),
     dateCreation: new Date().toISOString(),
-  });
+  };
+  const pollId = store.creerPollEnAttente(donneesPoll);
+
+  // Mode Direct : un seul candidat déjà choisi, sa fiche est juste affichée
+  // (pas de réaction, rien à voter sur le film). Aléatoire/Manuel : chaque
+  // candidat reçoit sa fiche + une réaction numérotée pour voter.
+  await posterFichesCandidats(interaction.channel, candidats, { avecVote: mode !== 'direct' });
+  await posterSondageDate(interaction.channel, { ...donneesPoll, votesCreneaux: {} }, pollId);
 
   await interaction.channel.send({
     content:
@@ -91,13 +91,13 @@ async function runSemaineSuivanteWizard(interaction, message) {
       'clique ci-dessous pour valider la séance (réservé admin/streamer).',
     components: [
       new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`cine_valider:${pollId}`).setLabel('✅ Valider séance').setStyle(ButtonStyle.Success)
+        new ButtonBuilder().setCustomId(`cine_valider:${pollId}`).setLabel('✅ Valider (streamer)').setStyle(ButtonStyle.Success)
       ),
     ],
   });
 
   await interaction.editReply({
-    content: `✅ Sondage(s) publié(s) dans <#${interaction.channel.id}> ! Utilise le bouton "Valider séance" une fois le dépouillement fait.`,
+    content: `✅ Sondage(s) publié(s) dans <#${interaction.channel.id}> ! Utilise le bouton "Valider (streamer)" une fois le dépouillement fait.`,
     components: [],
   });
 }

@@ -10,6 +10,7 @@ const {
   handlePresenceButton,
   handleStartEventButton,
   handleValiderSeanceButton,
+  handleVoteCreneauButton,
 } = require('./service');
 
 module.exports = {
@@ -26,6 +27,7 @@ module.exports = {
     { prefix: 'cine_presence', execute: handlePresenceButton },
     { prefix: 'cine_start_event', execute: handleStartEventButton },
     { prefix: 'cine_valider', execute: handleValiderSeanceButton },
+    { prefix: 'cine_vote_creneau', execute: handleVoteCreneauButton },
   ],
 
   // Démarre la boucle qui vérifie chaque minute les rappels programmés par

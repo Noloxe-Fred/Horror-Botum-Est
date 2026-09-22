@@ -406,7 +406,6 @@ async function demanderMessagePersonnalise(interaction, message, { defaut }) {
 }
 
 const NUM_EMOJIS =['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-const CRENEAU_EMOJIS = ['🇦', '🇧', '🇨'];
 const MAX_CANDIDATS = 10; // limite pratique du sondage à réactions (10 emojis numérotés)
 const PAGE_SIZE = 25; // limite Discord d'un select menu
 
@@ -532,24 +531,87 @@ async function selectionnerDansWatchlist(interaction, message, entrees, { multi 
   }
 }
 
-async function posterSondageReactions(channel, titreEmbed, entrees) {
-  const emojis = NUM_EMOJIS.slice(0, entrees.length);
-  const lignes = entrees.map((e, i) => `${emojis[i]} **${e.titre}**`).join('\n');
-  const message = await channel.send(`🗳️ **${titreEmbed}**\n\n${lignes}`);
-  for (const emoji of emojis) {
-    await message.react(emoji);
+/**
+ * Poste la fiche Components V2 (poster, synopsis, casting...) de chaque
+ * candidat, une par une (limite de 40 composants par message — impossible de
+ * regrouper plusieurs fiches complètes dans un seul message). En mode
+ * Aléatoire/Manuel (`avecVote`), chaque fiche reçoit une réaction numérotée
+ * pour servir de bulletin de vote ; en mode Direct (un seul candidat déjà
+ * choisi), la fiche est juste affichée sans réaction.
+ */
+async function posterFichesCandidats(channel, candidats, { avecVote }) {
+  const emojis = NUM_EMOJIS.slice(0, candidats.length);
+  const fiches = await Promise.all(candidats.map((c) => tmdb.getDetails(c.tmdbId, c.mediaType)));
+
+  for (let i = 0; i < fiches.length; i++) {
+    const entete = avecVote ? `${emojis[i]} **Candidat au sondage film**` : '🎬 **Film sélectionné**';
+    const container = prependTextDisplay(buildFicheContainer(fiches[i]), entete);
+    const message = await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+    if (avecVote) await message.react(emojis[i]);
   }
-  return message;
 }
 
-async function posterSondageHoraire(channel, creneaux) {
-  const emojis = CRENEAU_EMOJIS.slice(0, creneaux.length);
-  const lignes = creneaux.map((c, i) => `${emojis[i]} **${c.label}** (${formatDateFr(c.date)})`).join('\n');
-  const message = await channel.send(`🕒 **Sondage d'horaire**\n\n${lignes}`);
-  for (const emoji of emojis) {
-    await message.react(emoji);
+/**
+ * Compte les votes de créneau d'un sondage en attente, un vote par
+ * utilisateur (voir store.voterCreneau) — renvoie un tableau de compteurs
+ * indexé comme `poll.creneaux`.
+ */
+function compterVotesCreneaux(poll) {
+  const counts = new Array(poll.creneaux.length).fill(0);
+  for (const index of Object.values(poll.votesCreneaux || {})) {
+    if (counts[index] !== undefined) counts[index] += 1;
   }
-  return message;
+  return counts;
+}
+
+function libelleCreneauVotes(creneau, count) {
+  return `${creneau.label} — ${count} vote${count > 1 ? 's' : ''}`;
+}
+
+function construireRowVoteCreneaux(pollId, creneaux, counts) {
+  return new ActionRowBuilder().addComponents(
+    creneaux.map((c, i) =>
+      new ButtonBuilder()
+        .setCustomId(`cine_vote_creneau:${pollId}:${i}`)
+        .setLabel(libelleCreneauVotes(c, counts[i]))
+        .setStyle(ButtonStyle.Primary)
+    )
+  );
+}
+
+/**
+ * Sondage d'horaire à boutons (remplace l'ancien sondage à réactions) — le
+ * comptage des votes est automatique (voir handleVoteCreneauButton), le
+ * streamer n'a plus besoin de dépouiller à l'œil au moment de valider.
+ */
+async function posterSondageDate(channel, poll, pollId) {
+  const counts = compterVotesCreneaux(poll);
+  const lignes = poll.creneaux.map((c) => `**${c.label}** (${formatDateFr(new Date(c.date))})`).join('\n');
+  return channel.send({
+    content: `🕒 **Sondage d'horaire** — clique sur le créneau qui te convient !\n\n${lignes}`,
+    components: [construireRowVoteCreneaux(pollId, poll.creneaux, counts)],
+  });
+}
+
+/**
+ * Handler du bouton persistant "vote créneau" (customId
+ * `cine_vote_creneau:<pollId>:<index>`), posté sous le sondage de date de la
+ * branche "Séances Ciné semaine suivante". Un clic sur le créneau déjà voté
+ * retire le vote, un clic sur un autre créneau déplace le vote (un seul vote
+ * actif par utilisateur, comme pour la présence à une séance).
+ */
+async function handleVoteCreneauButton(interaction) {
+  const [, pollId, indexStr] = interaction.customId.split(':');
+  const poll = store.voterCreneau(pollId, Number(indexStr), interaction.user.id);
+  if (!poll) {
+    return interaction.reply({
+      content: '❌ Ce sondage est introuvable ou a déjà été validé.',
+      ephemeral: true,
+    });
+  }
+
+  const counts = compterVotesCreneaux(poll);
+  await interaction.update({ components: [construireRowVoteCreneaux(pollId, poll.creneaux, counts)] });
 }
 
 /**
@@ -776,9 +838,13 @@ async function handleValiderSeanceButton(interaction) {
   if (!poll.creneaux || poll.creneaux.length === 0) {
     return interaction.editReply('❌ Aucun créneau d\'horaire enregistré pour ce sondage.');
   }
+  const counts = compterVotesCreneaux(poll);
   const row = new ActionRowBuilder().addComponents(
     poll.creneaux.map((c, i) =>
-      new ButtonBuilder().setCustomId(`host_creneau_${i}`).setLabel(c.label).setStyle(ButtonStyle.Primary)
+      new ButtonBuilder()
+        .setCustomId(`host_creneau_${i}`)
+        .setLabel(libelleCreneauVotes(c, counts[i]))
+        .setStyle(ButtonStyle.Primary)
     )
   );
   await interaction.editReply({ content: 'Quel créneau a gagné le sondage d\'horaire ?', components: [row] });
@@ -994,8 +1060,8 @@ module.exports = {
   prependTextDisplay,
   attendreClic,
   selectionnerDansWatchlist,
-  posterSondageReactions,
-  posterSondageHoraire,
+  posterFichesCandidats,
+  posterSondageDate,
   demanderSalonVocal,
   demanderHeure,
   demanderTitreTmdb,
@@ -1010,4 +1076,5 @@ module.exports = {
   handlePresenceButton,
   handleStartEventButton,
   handleValiderSeanceButton,
+  handleVoteCreneauButton,
 };

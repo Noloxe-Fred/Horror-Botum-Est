@@ -44,6 +44,8 @@ const OPTIONAL = [
   'CINE_CLUB_ROLE_COURTS_METRAGES_ID',
   'CINE_CLUB_ROLE_SEANCES_SERIE_ID',
   'CINE_CLUB_ROLE_ARRACHE_ID',
+  // --- Letterboxd ---
+  'SOCIAL_NETWORKS_CHANNEL_ID',
 ];
 
 for (const key of OPTIONAL) {
@@ -74,6 +76,9 @@ module.exports = {
   channels: {
     quizId: process.env.QUIZ_CHANNEL_ID || null,
     quizResponseId: process.env.QUIZ_RESPONSE_CHANNEL_ID || null,
+    // Salon où chaque membre partage ses réseaux sociaux (scanné par
+    // /scan-letterbox).
+    socialNetworksId: process.env.SOCIAL_NETWORKS_CHANNEL_ID || null,
   },
 
   messages: {

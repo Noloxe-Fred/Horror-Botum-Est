@@ -44,6 +44,14 @@ src/
       tmdb.js                      # tirage TMDB d'un film d'horreur filtré
       commands/
         quiz-affiche-floutee.js
+    letterboxd/               # annuaire des profils Letterboxd des membres
+      index.js
+      service.js                 # extraction des liens + scan du salon
+      store.js                    # annuaire persistant (letterboxd-profils)
+      commands/
+        scan-letterbox.js
+        list-letterbox.js
+        delete-letterbox.js
     forbidden-word/           # stub, prêt à implémenter
       index.js
 ```
@@ -121,3 +129,23 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   remis à zéro pour un nouveau cycle.
 - Dépendance ajoutée : [`jimp`](https://www.npmjs.com/package/jimp) (pur JS,
   pas de binaire natif à compiler) pour la pixélisation des affiches.
+
+## Letterboxd
+
+- `/scan-letterbox` (admin) lit **tout** l'historique du salon
+  `SOCIAL_NETWORKS_CHANNEL_ID` (ou du salon passé en option `salon`) et
+  enregistre, pour chaque membre, son pseudo serveur (displayName) et son lien
+  Letterboxd. Formats reconnus : `letterboxd.com/<pseudo>` (avec ou sans
+  `https://`/`www.`, sous-pages comme `/films` tolérées) normalisé en
+  `https://letterboxd.com/<pseudo>/`, et `boxd.it/<code>` conservé tel quel.
+  Les liens vers des films/listes (`letterboxd.com/film/...`) sont ignorés.
+- Si un membre a posté plusieurs messages, le lien du plus récent est retenu.
+  Bots et membres ayant quitté le serveur sont ignorés. Chaque scan remplace
+  entièrement l'annuaire (`data-store/letterboxd-profils.json`).
+- `/list-letterbox` (tout le monde) affiche la liste triée par pseudo dans un
+  embed (découpé en plusieurs messages si la liste est très longue).
+- `/delete-letterbox` (admin) ouvre un formulaire éphémère avec un menu
+  déroulant à choix multiples pour retirer des profils de l'annuaire
+  (pagination Précédent/Suivant au-delà de 25 profils, limite Discord).
+  ⚠️ Un nouveau `/scan-letterbox` ré-ajoutera un profil supprimé si son
+  message est toujours dans le salon.

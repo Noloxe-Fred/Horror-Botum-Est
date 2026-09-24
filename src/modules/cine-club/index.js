@@ -1,6 +1,7 @@
 const search = require('./commands/search');
 const add = require('./commands/add');
 const list = require('./commands/list');
+const deleteWatchlist = require('./commands/delete-watchlist');
 const cine = require('./commands/cine');
 const serieEnCours = require('./commands/serie-en-cours');
 const historique = require('./commands/historique');
@@ -15,7 +16,7 @@ const {
 
 module.exports = {
   name: 'cine-club',
-  commands: [search, add, list, cine, serieEnCours, historique, helpCine],
+  commands: [search, add, list, deleteWatchlist, cine, serieEnCours, historique, helpCine],
 
   // Boutons persistants sur les annonces (carte séance) et les sondages
   // /cine — survivent à un redémarrage du bot puisqu'ils sont dispatchés par

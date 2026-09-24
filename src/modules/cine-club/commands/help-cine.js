@@ -22,13 +22,18 @@ const COMMANDES = [
     description: 'Liste la watchlist, avec filtres type/genre et tri (récent, note, durée).',
   },
   {
+    nom: '/delete-watchlist',
+    acces: 'Admin ou rôle streamer',
+    description: 'Retire un ou plusieurs titres de la watchlist via un menu de sélection.',
+  },
+  {
     nom: '/cine',
     acces: 'Rôle streamer, salon ciné-club uniquement',
     description:
       'Point d\'entrée unique pour organiser une séance, avec 4 branches : Séances Séries ' +
       '(recherche TMDB, séance lundi prochain), Séance à l\'arrache (ce soir), Séance 48h ' +
       '(surlendemain, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
-      'suivante (sondage films mardi/vendredi/samedi, puis bouton "Valider séance" réservé ' +
+      'suivante (films de la watchlist ou recherche TMDB, sondage de date mardi/vendredi/samedi, puis bouton "Valider séance" réservé ' +
       'admin/rôle streamer pour finaliser et créer l\'event).',
   },
   {

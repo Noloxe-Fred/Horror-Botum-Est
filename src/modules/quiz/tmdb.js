@@ -10,7 +10,7 @@ const IMG_BASE = 'https://image.tmdb.org/t/p/w500';
 
 const GENRE_HORREUR = 27; // ID de genre TMDB pour "Horreur"
 const NOTE_MIN = 5; // 5/10 = 50%, seuil validé avec l'utilisateur
-const VOTES_MIN = 20; // évite les films avec 1-2 votes non représentatifs (hypothèse, à ajuster si besoin)
+const VOTES_MIN = 200; // évite les films avec 1-2 votes non représentatifs (hypothèse, à ajuster si besoin)
 const ANNEE_MIN = '1920-01-01';
 const MAX_PAGES_TMDB = 500; // limite dure de l'API /discover
 const MAX_TENTATIVES_TIRAGE = 8; // nombre de pages aléatoires essayées avant d'abandonner

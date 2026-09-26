@@ -110,14 +110,31 @@ function reponseCorrecte(reponseUser, reponsesAcceptees) {
 // titre en # / SeparatorBuilder entre sections / note en -# / boutons lien en fin.
 
 /**
- * Carte "manche en cours" — postée à chaque palier (1 à 4). `mention` n'est
- * fourni que pour le palier 1 (annonce du rôle "Jouons à un jeu"), pour ne
- * pas re-pinger tout le monde à chaque palier suivant de la même manche.
+ * Mention du rôle "Jouons à un jeu", ajoutée en tête de chaque post du quiz
+ * (paliers 1 à 4 et reveal, donc tous les 2 jours). Chaîne vide si le rôle
+ * n'est pas configuré.
  */
-function construireContainerManche(session, buffer, { mention = '' } = {}) {
-  const nomFichier = `quiz-poster-palier-${session.stage}.png`;
-  const attachment = new AttachmentBuilder(buffer, { name: nomFichier });
+function mentionRoleQuiz() {
+  return config.roles.quizPingRoleId ? `<@&${config.roles.quizPingRoleId}> ` : '';
+}
 
+function formaterCompteurReponses(nb) {
+  return `📨 **${nb}** réponse${nb > 1 ? 's' : ''} donnée${nb > 1 ? 's' : ''}`;
+}
+
+function nomFichierManche(session) {
+  return `quiz-poster-palier-${session.stage}.png`;
+}
+
+/**
+ * Carte "manche en cours" — postée à chaque palier (1 à 4), précédée de la
+ * mention du rôle "Jouons à un jeu" si fournie. Ne contient pas l'image
+ * elle-même (référencée via attachment://) : le même container sert à l'envoi
+ * initial (avec `files`) et aux éditions du compteur de réponses (les pièces
+ * jointes déjà présentes sur le message sont conservées).
+ */
+function construireContainerManche(session, { mention = '', nbReponses = 0 } = {}) {
+  const nomFichier = nomFichierManche(session);
   const container = new ContainerBuilder().setAccentColor(COULEUR_QUIZ);
 
   container.addTextDisplayComponents((t) =>
@@ -132,6 +149,7 @@ function construireContainerManche(session, buffer, { mention = '' } = {}) {
   container.addTextDisplayComponents((t) =>
     t.setContent("Devine le film d'horreur à partir de cette affiche. Plus elle se précise, moins tu marques de points !")
   );
+  container.addTextDisplayComponents((t) => t.setContent(`-# ${formaterCompteurReponses(nbReponses)}`));
   separateur(container);
 
   container.addActionRowComponents((row) =>
@@ -143,7 +161,36 @@ function construireContainerManche(session, buffer, { mention = '' } = {}) {
     )
   );
 
-  return { container, attachment };
+  return container;
+}
+
+/**
+ * Poste la carte du palier courant et mémorise son ID dans la session, pour
+ * pouvoir mettre à jour le compteur de réponses ensuite.
+ */
+async function posterCarteManche(channel, session, buffer) {
+  const attachment = new AttachmentBuilder(buffer, { name: nomFichierManche(session) });
+  const container = construireContainerManche(session, {
+    mention: mentionRoleQuiz(),
+    nbReponses: store.compterReponses(session.roundId),
+  });
+  const message = await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container], files: [attachment] });
+  store.setSession({ ...session, messageId: message.id });
+}
+
+/**
+ * Réédite la carte du palier courant avec le compteur de réponses à jour.
+ * Les éditions ne re-mentionnent pas le rôle (Discord ne ping qu'à l'envoi).
+ */
+async function majCompteurReponses(client, session) {
+  if (!session.messageId) return; // session créée avant l'ajout du compteur
+  const channel = await client.channels.fetch(config.channels.quizId);
+  const message = await channel.messages.fetch(session.messageId);
+  const container = construireContainerManche(session, {
+    mention: mentionRoleQuiz(),
+    nbReponses: store.compterReponses(session.roundId),
+  });
+  await message.edit({ components: [container] });
 }
 
 function formaterLigneGagnant(g) {
@@ -153,7 +200,7 @@ function formaterLigneGagnant(g) {
   );
 }
 
-function construireContainerReveal(session, buffer, gagnants) {
+function construireContainerReveal(session, buffer, gagnants, { mention = '', nbReponses = 0 } = {}) {
   const nomFichier = 'quiz-poster-reveal.png';
   const attachment = new AttachmentBuilder(buffer, { name: nomFichier });
   const annee = session.dateSortie ? ` (${session.dateSortie.slice(0, 4)})` : '';
@@ -166,7 +213,7 @@ function construireContainerReveal(session, buffer, gagnants) {
   const container = new ContainerBuilder().setAccentColor(COULEUR_QUIZ);
 
   container.addTextDisplayComponents((t) =>
-    t.setContent(`# 🎬 Quiz Affiche Floutée — Réponse !\nManche ${session.numeroManche}/${NB_MANCHES_PAR_CYCLE}`)
+    t.setContent(`${mention}# 🎬 Quiz Affiche Floutée — Réponse !\nManche ${session.numeroManche}/${NB_MANCHES_PAR_CYCLE}`)
   );
   separateur(container);
 
@@ -177,7 +224,9 @@ function construireContainerReveal(session, buffer, gagnants) {
   container.addTextDisplayComponents((t) => t.setContent(`**${session.titre}**${annee}\n${session.overview}`));
   separateur(container);
 
-  container.addTextDisplayComponents((t) => t.setContent(`**Bonnes réponses de cette manche :**\n${lignesGagnants}`));
+  container.addTextDisplayComponents((t) =>
+    t.setContent(`**Bonnes réponses de cette manche :**\n${lignesGagnants}\n-# ${formaterCompteurReponses(nbReponses)} au total`)
+  );
   container.addTextDisplayComponents((t) =>
     t.setContent(`-# Le classement général reste secret jusqu'à la ${NB_MANCHES_PAR_CYCLE}e manche du cycle...`)
   );
@@ -259,9 +308,7 @@ async function demarrerNouvelleManche(client, startedBy) {
   store.setSession(session);
 
   const channel = await client.channels.fetch(config.channels.quizId);
-  const mention = config.roles.quizPingRoleId ? `<@&${config.roles.quizPingRoleId}> ` : '';
-  const { container, attachment } = construireContainerManche(session, bufferFlou, { mention });
-  await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container], files: [attachment] });
+  await posterCarteManche(channel, session, bufferFlou);
 
   return true;
 }
@@ -285,10 +332,7 @@ async function avancerManche(client) {
     const sessionMaj = { ...session, stage: nouveauStage, nextStageAt: Date.now() + DELAI_PALIER_MS };
     store.setSession(sessionMaj);
 
-    // Pas de mention ici : seul le palier 1 (nouvelle manche) ping le rôle,
-    // pour ne pas spammer tous les 2 jours sur la même manche.
-    const { container, attachment } = construireContainerManche(sessionMaj, buffer);
-    await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container], files: [attachment] });
+    await posterCarteManche(channel, sessionMaj, buffer);
     return;
   }
 
@@ -296,7 +340,10 @@ async function avancerManche(client) {
   const bufferNet = await tmdb.telechargerPoster(session.posterUrl);
   const gagnants = store.getGagnants(session.roundId);
 
-  const { container, attachment } = construireContainerReveal(session, bufferNet, gagnants);
+  const { container, attachment } = construireContainerReveal(session, bufferNet, gagnants, {
+    mention: mentionRoleQuiz(),
+    nbReponses: store.compterReponses(session.roundId),
+  });
   await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container], files: [attachment] });
 
   store.addUsedTmdbId(session.tmdbId);
@@ -365,6 +412,12 @@ async function gererSoumissionReponse(interaction) {
   const nbTentatives = store.enregistrerTentative(roundId, interaction.user.id, interaction.user.tag);
 
   const correct = reponseCorrecte(reponseBrute, [session.titre, session.titreOriginal]);
+
+  // Non bloquant : un échec d'édition du compteur ne doit pas empêcher la
+  // réponse au joueur.
+  majCompteurReponses(interaction.client, session).catch((err) => {
+    console.error('[QUIZ] Impossible de mettre à jour le compteur de réponses :', err);
+  });
 
   if (!correct) {
     return interaction.reply({ content: '❌ Mauvaise réponse, retente !', ephemeral: true });

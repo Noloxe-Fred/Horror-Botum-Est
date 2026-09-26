@@ -65,6 +65,15 @@ function getGagnants(roundId) {
     .sort((a, b) => b.points - a.points || a.tentatives - b.tentatives);
 }
 
+/**
+ * Nombre total de réponses soumises sur une manche (toutes tentatives de
+ * tous les joueurs, bonnes ou mauvaises) — affiché en compteur sur la carte.
+ */
+function compterReponses(roundId) {
+  const data = getToutesLesTentatives();
+  return Object.values(data[roundId] || {}).reduce((total, e) => total + e.count, 0);
+}
+
 function clearTentatives(roundId) {
   const data = getToutesLesTentatives();
   delete data[roundId];
@@ -132,6 +141,7 @@ module.exports = {
   aDejaTrouve,
   enregistrerTrouvaille,
   getGagnants,
+  compterReponses,
   clearTentatives,
   getEtatCycle,
   ajouterPoints,

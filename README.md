@@ -109,11 +109,14 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   entre 1920 et aujourd'hui) et poste son affiche très pixélisée dans
   `QUIZ_CHANNEL_ID`, avec un bouton **Répondre** qui ouvre une fenêtre modale
   (champ texte libre). Le rôle `QUIZ_ROLE_JOUONS_A_UN_JEU_ID` (si configuré)
-  est mentionné au lancement de chaque nouvelle manche (palier 1 uniquement,
-  pas à chaque palier suivant).
+  est mentionné sur chaque post du quiz (chaque palier et le reveal, soit
+  tous les 2 jours).
 - La réponse est vérifiée avec tolérance aux fautes de frappe/accents
   (distance de Levenshtein). Le retour est **éphémère** (visible seulement
   par le joueur) et ne révèle jamais le titre en cas d'erreur.
+- La carte du palier en cours affiche un compteur des réponses données
+  (toutes tentatives confondues), mis à jour à chaque réponse ; le total
+  final est rappelé sur le reveal.
 - Chaque bonne réponse est annoncée publiquement dans `QUIZ_RESPONSE_CHANNEL_ID`
   (pseudo, palier atteint, points gagnés, nombre de tentatives) — sans jamais
   répéter le texte proposé ni le titre.

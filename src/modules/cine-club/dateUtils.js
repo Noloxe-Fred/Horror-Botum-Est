@@ -1,4 +1,4 @@
-// Tous les calculs de dates du module ciné-club, en JS natif (pas de
+// Tous les calculs de dates du module Séances Ciné, en JS natif (pas de
 // dépendance type date-fns), conformément à la doctrine du projet.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -93,11 +93,30 @@ function ceSoirA(heure, minute = 0, from = new Date()) {
 }
 
 /**
- * Heure choisie le surlendemain de `from` (utilisé par la séance "48h") —
- * toujours dans 2 jours calendaires, peu importe l'heure actuelle.
+ * Les `nb` prochains jours calendaires à partir de demain (00:00), pour le
+ * choix de date de la "Séance Libre". setDate() plutôt que + n * DAY_MS
+ * pour rester juste lors des changements d'heure été/hiver.
  */
-function dansDeuxJoursA(heure, minute = 0, from = new Date()) {
-  return atHeure(new Date(from.getTime() + 2 * DAY_MS), heure, minute);
+function prochainsJours(nb, from = new Date()) {
+  return Array.from({ length: nb }, (_, i) => {
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i + 1);
+    return d;
+  });
+}
+
+/**
+ * "Mardi 29 septembre" — libellé d'un jour dans le sélecteur de date.
+ */
+function formatJourFr(date) {
+  const texte = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(date);
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
 }
 
 function formatDateFr(date) {
@@ -116,7 +135,9 @@ module.exports = {
   formatHeureCourte,
   creneauxFilmSemaineSuivante,
   prochainLundiA,
+  atHeure,
   ceSoirA,
-  dansDeuxJoursA,
+  prochainsJours,
+  formatJourFr,
   formatDateFr,
 };

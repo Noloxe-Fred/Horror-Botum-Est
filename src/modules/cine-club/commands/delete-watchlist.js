@@ -76,12 +76,12 @@ function construireVue(entrees, page, entete = '') {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('delete-watchlist')
-    .setDescription('Retire un ou plusieurs titres de la watchlist ciné-club'),
+    .setDescription('Retire un ou plusieurs titres de la watchlist Séances Ciné'),
 
   execute: withErrorHandling(async (interaction) => {
     if (
       !(await requireAnyRole(interaction, [config.cineClub.streamerRoleId], {
-        label: 'le rôle streamer ciné-club',
+        label: 'le rôle streamer Séances Ciné',
       }))
     )
       return;
@@ -128,5 +128,5 @@ module.exports = {
       await choix.update(vue);
       if (entrees.length === 0) return;
     }
-  }, 'CINE-CLUB-DELETE-WATCHLIST'),
+  }, 'SEANCES-CINE-DELETE-WATCHLIST'),
 };

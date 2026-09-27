@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 // Force le fuseau horaire du process à Europe/Paris. Sans ça, tous les
-// calculs de dates du module ciné-club (dateUtils.js, qui utilise
+// calculs de dates du module Séances Ciné (dateUtils.js, qui utilise
 // Date.setHours en heure LOCALE du serveur) supposent implicitement que le
 // serveur tourne à l'heure de Paris. Sur la plupart des hébergeurs, le
 // serveur tourne par défaut en UTC : "21h" calculé par setHours(21) devenait
@@ -33,7 +33,7 @@ const OPTIONAL = [
   'QUIZ_CHANNEL_ID',
   'QUIZ_RESPONSE_CHANNEL_ID',
   'QUIZ_ROLE_JOUONS_A_UN_JEU_ID',
-  // --- Ciné-Club ---
+  // --- Séances Ciné ---
   'TMDB_API_KEY',
   'CINE_CLUB_CHANNEL_ID',
   'CINE_CLUB_CHANNEL_ARRACHE_ID',
@@ -90,7 +90,7 @@ module.exports = {
       `https://discord.gg/jXN2UV6T7v`,
   },
 
-  // --- Ciné-Club ---
+  // --- Séances Ciné ---
   tmdb: {
     apiKey: process.env.TMDB_API_KEY || null,
   },

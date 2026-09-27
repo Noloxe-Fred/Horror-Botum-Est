@@ -17,7 +17,7 @@ const { requireAnyRole } = require('../../core/permissions');
 const store = require('./store');
 const tmdb = require('./tmdb');
 
-const COULEUR_QUIZ = 0x8e44ad; // violet, distinct des couleurs film/série du ciné-club
+const COULEUR_QUIZ = 0x8e44ad; // violet, distinct des couleurs film/série des Séances Ciné
 const DELAI_PALIER_MS = 2 * 24 * 60 * 60 * 1000; // 2 jours entre chaque palier, validé avec l'utilisateur
 const NIVEAUX_PIXEL = { 1: 5, 2: 12, 3: 25, 4: 50 }; // largeur (px) du downscale avant remise à l'échelle — plus petit = plus pixélisé
 const NB_MANCHES_PAR_CYCLE = 10;

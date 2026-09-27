@@ -5,24 +5,24 @@ const withErrorHandling = require('../../../core/withErrorHandling');
 const { attendreClic } = require('../service');
 const { runSeriesWizard } = require('../wizards/series');
 const { runArracheWizard } = require('../wizards/arrache');
-const { run48hWizard } = require('../wizards/quarante-huit-heures');
+const { runSeanceLibreWizard } = require('../wizards/seance-libre');
 const { runSemaineSuivanteWizard } = require('../wizards/semaine-suivante');
 
 const CHOIX = [
   { customId: 'cine_menu_series', label: '📺 Séances Séries', style: ButtonStyle.Primary },
   { customId: 'cine_menu_arrache', label: "🔥 Séance à l'arrache", style: ButtonStyle.Danger },
-  { customId: 'cine_menu_48h', label: '🕑 Séance 48h', style: ButtonStyle.Secondary },
+  { customId: 'cine_menu_libre', label: '🗓️ Séance Libre', style: ButtonStyle.Secondary },
   { customId: 'cine_menu_semaine', label: '🎬 Séances Ciné semaine suivante', style: ButtonStyle.Primary },
 ];
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cine')
-    .setDescription('Point d\'entrée unique pour organiser une séance ciné-club'),
+    .setDescription('Point d\'entrée unique pour organiser une Séance Ciné'),
 
   execute: withErrorHandling(async (interaction) => {
     if (!(await requireStreamerRole(interaction))) return;
-    if (!(await requireChannel(interaction, config.cineClub.channelId, { label: 'le salon ciné-club' }))) return;
+    if (!(await requireChannel(interaction, config.cineClub.channelId, { label: 'le salon Séances Ciné' }))) return;
 
     await interaction.deferReply({ ephemeral: true });
     const message = await interaction.editReply({
@@ -54,7 +54,7 @@ module.exports = {
 
     await clic.deferUpdate();
 
-    if (clic.customId === 'cine_menu_48h') return run48hWizard(interaction, message);
+    if (clic.customId === 'cine_menu_libre') return runSeanceLibreWizard(interaction, message);
     if (clic.customId === 'cine_menu_semaine') return runSemaineSuivanteWizard(interaction, message);
-  }, 'CINE-CLUB-CINE'),
+  }, 'SEANCES-CINE-CINE'),
 };

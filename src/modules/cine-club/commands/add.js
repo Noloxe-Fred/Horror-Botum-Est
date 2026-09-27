@@ -124,5 +124,5 @@ module.exports = {
       flags: MessageFlags.IsComponentsV2,
       components: [container],
     });
-  }, 'CINE-CLUB-ADD'),
+  }, 'SEANCES-CINE-ADD'),
 };

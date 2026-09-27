@@ -122,7 +122,7 @@ async function runArracheWizard(interaction, clicBouton, message) {
     });
     eventId = evenement.id;
   } catch (err) {
-    console.error("[CINE-CLUB] Impossible de créer l'événement Discord natif :", err);
+    console.error("[SEANCES-CINE] Impossible de créer l'événement Discord natif :", err);
   }
 
   const roleId = config.cineClub.roles.arrache;

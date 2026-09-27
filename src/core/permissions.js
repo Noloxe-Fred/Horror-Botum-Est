@@ -21,7 +21,7 @@ async function requireAdmin(interaction) {
 }
 
 /**
- * Vérifie que l'utilisateur possède le rôle streamer ciné-club
+ * Vérifie que l'utilisateur possède le rôle streamer Séances Ciné
  * (CINE_CLUB_STREAMER_ROLE_ID). Générique : sur le même modèle que
  * requireAdmin, mais pensé pour être réutilisable si d'autres modules ont
  * besoin d'un rôle "responsable" dédié plus tard.
@@ -39,7 +39,7 @@ async function requireStreamerRole(interaction) {
 
   if (!interaction.member.roles.cache.has(roleId)) {
     await interaction.reply({
-      content: '❌ Cette commande est réservée au rôle streamer du ciné-club.',
+      content: '❌ Cette commande est réservée au rôle streamer des Séances Ciné.',
       ephemeral: true,
     });
     return false;

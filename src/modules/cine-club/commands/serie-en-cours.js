@@ -7,14 +7,14 @@ const { buildSeanceContainer } = require('../service');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('serie-en-cours')
-    .setDescription('Rappelle quelle série est actuellement suivie par le ciné-club'),
+    .setDescription('Rappelle quelle série est actuellement suivie aux Séances Ciné'),
 
   execute: withErrorHandling(async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
 
     const serie = store.getSerieCourante();
     if (!serie || !serie.sessionKey) {
-      return interaction.editReply("📭 Aucune série n'est actuellement en cours au ciné-club.");
+      return interaction.editReply("📭 Aucune série n'est actuellement en cours aux Séances Ciné.");
     }
 
     // La série ne garde qu'une référence vers l'annonce complète postée par
@@ -45,12 +45,12 @@ module.exports = {
       presentsCount,
       presentsList,
       mention: annonce.mention,
-      annonceTexte: 'Rappel : toujours au programme du ciné-club !',
+      annonceTexte: 'Rappel : toujours au programme des Séances Ciné !',
       guildId: annonce.guildId,
       eventId: annonce.eventId,
     });
 
     await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
     await interaction.editReply(`✅ Rappel posté dans <#${targetChannelId}> !`);
-  }, 'CINE-CLUB-SERIE-EN-COURS'),
+  }, 'SEANCES-CINE-SERIE-EN-COURS'),
 };

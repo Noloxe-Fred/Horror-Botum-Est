@@ -50,7 +50,7 @@ async function runSeriesWizard(interaction, clicBouton, message) {
   if (!salonVocalId) return; // message d'erreur/timeout déjà posté
 
   const annonceTexte = await demanderMessagePersonnalise(interaction, message, {
-    defaut: 'Nouvelle séance série ciné-club programmée !',
+    defaut: 'Nouvelle séance série programmée aux Séances Ciné !',
   });
   if (!annonceTexte) return; // message d'erreur/timeout déjà posté par demanderMessagePersonnalise
 
@@ -65,7 +65,7 @@ async function runSeriesWizard(interaction, clicBouton, message) {
   let eventId = null;
   try {
     const evenement = await interaction.guild.scheduledEvents.create({
-      name: `Ciné-Club : ${fiche.titre}`,
+      name: `Séances Ciné : ${fiche.titre}`,
       scheduledStartTime: dateSeance,
       scheduledEndTime: new Date(dateSeance.getTime() + 150 * 60 * 1000),
       privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
@@ -75,7 +75,7 @@ async function runSeriesWizard(interaction, clicBouton, message) {
     });
     eventId = evenement.id;
   } catch (err) {
-    console.error("[CINE-CLUB] Impossible de créer l'événement Discord natif :", err);
+    console.error("[SEANCES-CINE] Impossible de créer l'événement Discord natif :", err);
   }
 
   const roleId = config.cineClub.roles.seancesSerie;

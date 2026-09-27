@@ -444,7 +444,7 @@ function construireRowPagination(page, totalPages) {
 /**
  * Sélecteur paginé, multi ou single-select, dans la watchlist. Utilisé par
  * les branches "Séances Séries", "Séances Ciné semaine suivante" (modes
- * Manuel/Direct) et "Séance 48h" (choix watchlist). Renvoie le tableau des
+ * Manuel/Direct) et "Séance Libre" (choix watchlist). Renvoie le tableau des
  * entrées choisies.
  */
 async function selectionnerDansWatchlist(interaction, message, entrees, { multi }) {
@@ -616,7 +616,7 @@ async function handleVoteCreneauButton(interaction) {
 
 /**
  * Demande un titre libre via modale (recherche TMDB) — utilisé par les
- * branches "Séance à l'arrache" et "Séance 48h". `clicBouton` est
+ * branches "Séance à l'arrache" et "Séance Libre". `clicBouton` est
  * l'interaction du bouton qui déclenche l'ouverture de la modale (une
  * modale doit être la toute première réponse à son interaction).
  *
@@ -733,7 +733,7 @@ function demarrerSchedulerRappels(client) {
         const mention = reminder.roleId ? `<@&${reminder.roleId}> ` : '';
         await channel.send(`${mention}${reminder.message}`);
       } catch (err) {
-        console.error('[CINE-CLUB] Impossible d\'envoyer un rappel :', err);
+        console.error('[SEANCES-CINE] Impossible d\'envoyer un rappel :', err);
       } finally {
         store.markReminderSent(reminder.id);
       }
@@ -786,7 +786,7 @@ function prependTextDisplay(container, texte) {
  * crée l'événement Discord natif. Réservé à l'admin ou au rôle streamer.
  */
 async function handleValiderSeanceButton(interaction) {
-  if (!(await requireAnyRole(interaction, [config.cineClub.streamerRoleId], { label: 'le rôle streamer ciné-club' })))
+  if (!(await requireAnyRole(interaction, [config.cineClub.streamerRoleId], { label: 'le rôle streamer Séances Ciné' })))
     return;
 
   const pollId = interaction.customId.split(':').slice(1).join(':');
@@ -895,7 +895,7 @@ async function handleValiderSeanceButton(interaction) {
 
   // --- Étape 5 : message personnalisé de l'annonce ---
   const annonceTexte = await demanderMessagePersonnalise(interaction, message, {
-    defaut: 'Nouvelle séance ciné-club programmée !',
+    defaut: 'Nouvelle Séance Ciné programmée !',
   });
   if (!annonceTexte) return; // message d'erreur/timeout déjà posté par demanderMessagePersonnalise
 
@@ -906,7 +906,7 @@ async function handleValiderSeanceButton(interaction) {
   let eventId = null;
   try {
     const evenement = await interaction.guild.scheduledEvents.create({
-      name: `Ciné-Club : ${fiche.titre}`,
+      name: `Séances Ciné : ${fiche.titre}`,
       scheduledStartTime: dateSeance,
       scheduledEndTime: new Date(dateSeance.getTime() + 150 * 60 * 1000),
       privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
@@ -916,7 +916,7 @@ async function handleValiderSeanceButton(interaction) {
     });
     eventId = evenement.id;
   } catch (err) {
-    console.error("[CINE-CLUB] Impossible de créer l'événement Discord natif :", err);
+    console.error("[SEANCES-CINE] Impossible de créer l'événement Discord natif :", err);
   }
 
   const mention = roleId ? `<@&${roleId}> ` : '';
@@ -979,7 +979,7 @@ async function handleValiderSeanceButton(interaction) {
       components: [],
     });
   } catch (err) {
-    console.error('[CINE-CLUB] Impossible de mettre à jour le message de sondage :', err);
+    console.error('[SEANCES-CINE] Impossible de mettre à jour le message de sondage :', err);
   }
 
   await interaction.editReply({ content: `✅ Séance programmée et annoncée dans <#${targetChannelId}> !`, components: [] });
@@ -1045,7 +1045,7 @@ async function handleStartEventButton(interaction) {
     await evenement.setStatus(GuildScheduledEventStatus.Active);
     await interaction.reply({ content: "▶️ Évènement démarré !", ephemeral: true });
   } catch (err) {
-    console.error("[CINE-CLUB] Impossible de démarrer l'évènement :", err);
+    console.error("[SEANCES-CINE] Impossible de démarrer l'évènement :", err);
     await interaction.reply({
       content: "❌ Impossible de démarrer l'évènement (déjà démarré/terminé, ou permissions manquantes).",
       ephemeral: true,

@@ -10,7 +10,7 @@ const {
 const config = require('../../../config');
 const tmdb = require('../tmdb');
 const store = require('../store');
-const { dansDeuxJoursA } = require('../dateUtils');
+const { prochainsJours, formatJourFr, atHeure } = require('../dateUtils');
 const {
   attendreClic,
   selectionnerDansWatchlist,
@@ -25,33 +25,36 @@ const {
   programmerRappels,
 } = require('../service');
 
+const NB_JOURS_PROPOSES = 5;
+
 /**
- * Branche "Séance 48h" de /cine — propose un film pour le surlendemain
- * soir. Film choisi soit dans la watchlist, soit via une recherche TMDB
- * libre. Heure et rôle à mentionner (Séances Cinés / Ciné Classiques /
- * Courts Métrages) choisis par le streamer, comme /host.
+ * Branche "Séance Libre" de /cine — programme un film à une date libre
+ * parmi les NB_JOURS_PROPOSES prochains jours (à partir de demain), à une heure
+ * libre. Film choisi soit dans la watchlist, soit via une recherche TMDB
+ * libre. Rôle à mentionner (Séances Cinés / Ciné Classiques / Courts
+ * Métrages) choisi par le streamer, comme /host.
  */
-async function run48hWizard(interaction, message) {
+async function runSeanceLibreWizard(interaction, message) {
   await interaction.editReply({
-    content: '🕑 **Séance 48h** — comment choisir le film ?',
+    content: '🗓️ **Séance Libre** — comment choisir le film ?',
     components: [
       new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('cine48_source_watchlist').setLabel('🎯 Watchlist').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('cine48_source_tmdb').setLabel('🔎 Recherche TMDB').setStyle(ButtonStyle.Primary)
+        new ButtonBuilder().setCustomId('cinelibre_source_watchlist').setLabel('🎯 Watchlist').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('cinelibre_source_tmdb').setLabel('🔎 Recherche TMDB').setStyle(ButtonStyle.Primary)
       ),
     ],
   });
 
   let clicSource;
   try {
-    clicSource = await attendreClic(message, interaction.user.id, ['cine48_source_watchlist', 'cine48_source_tmdb']);
+    clicSource = await attendreClic(message, interaction.user.id, ['cinelibre_source_watchlist', 'cinelibre_source_tmdb']);
   } catch {
     return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
   }
 
   let elu; // { tmdbId, mediaType }
 
-  if (clicSource.customId === 'cine48_source_watchlist') {
+  if (clicSource.customId === 'cinelibre_source_watchlist') {
     await clicSource.deferUpdate();
     const watchlist = store.listWatchlist({ mediaType: 'movie' });
     const choix = await selectionnerDansWatchlist(interaction, message, watchlist, { multi: false });
@@ -60,7 +63,7 @@ async function run48hWizard(interaction, message) {
   } else {
     // Recherche TMDB : la modale doit être la toute première réponse à ce
     // clic, donc pas de deferUpdate() avant demanderTitreTmdb().
-    const titre = await demanderTitreTmdb(interaction, clicSource, message, { label: 'Film à diffuser dans 2 jours' });
+    const titre = await demanderTitreTmdb(interaction, clicSource, message, { label: 'Film à diffuser' });
     if (!titre) return;
 
     await interaction.editReply({ content: 'Recherche en cours...', components: [] });
@@ -73,15 +76,35 @@ async function run48hWizard(interaction, message) {
     elu = choisi;
   }
 
+  const jours = prochainsJours(NB_JOURS_PROPOSES);
+  const selectJour = new StringSelectMenuBuilder()
+    .setCustomId('cinelibre_jour')
+    .setPlaceholder('Jour de la séance')
+    .addOptions(jours.map((j, i) => ({ label: formatJourFr(j), value: String(i) })));
+
+  await interaction.editReply({
+    content: 'Quel jour ?',
+    components: [new ActionRowBuilder().addComponents(selectJour)],
+  });
+
+  let clicJour;
+  try {
+    clicJour = await attendreClic(message, interaction.user.id, ['cinelibre_jour']);
+  } catch {
+    return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+  }
+  await clicJour.deferUpdate();
+  const jourChoisi = jours[Number(clicJour.values[0])];
+
   const heureChoisie = await demanderHeure(interaction, message, {
     defaut: '21h00',
-    label: "l'heure de diffusion (dans 2 jours)",
+    label: `l'heure de diffusion (${formatJourFr(jourChoisi)})`,
   });
   if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
-  const dateSeance = dansDeuxJoursA(heureChoisie.heure, heureChoisie.minute);
+  const dateSeance = atHeure(jourChoisi, heureChoisie.heure, heureChoisie.minute);
 
   const selectRole = new StringSelectMenuBuilder()
-    .setCustomId('cine48_role')
+    .setCustomId('cinelibre_role')
     .setPlaceholder('Type de séance')
     .addOptions(TYPES_SEANCE_FILM.map((t) => ({ label: t.label, value: t.id })));
 
@@ -92,7 +115,7 @@ async function run48hWizard(interaction, message) {
 
   let clicRole;
   try {
-    clicRole = await attendreClic(message, interaction.user.id, ['cine48_role']);
+    clicRole = await attendreClic(message, interaction.user.id, ['cinelibre_role']);
   } catch {
     return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
   }
@@ -103,7 +126,7 @@ async function run48hWizard(interaction, message) {
   if (!salonVocalId) return; // message d'erreur/timeout déjà posté
 
   const annonceTexte = await demanderMessagePersonnalise(interaction, message, {
-    defaut: 'Séance ciné-club programmée dans 2 jours !',
+    defaut: `Séance Ciné programmée pour ${formatJourFr(jourChoisi).toLowerCase()} !`,
   });
   if (!annonceTexte) return; // message d'erreur/timeout déjà posté par demanderMessagePersonnalise
 
@@ -118,7 +141,7 @@ async function run48hWizard(interaction, message) {
   let eventId = null;
   try {
     const evenement = await interaction.guild.scheduledEvents.create({
-      name: `Ciné-Club : ${fiche.titre}`,
+      name: `Séances Ciné : ${fiche.titre}`,
       scheduledStartTime: dateSeance,
       scheduledEndTime: new Date(dateSeance.getTime() + 150 * 60 * 1000),
       privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
@@ -128,7 +151,7 @@ async function run48hWizard(interaction, message) {
     });
     eventId = evenement.id;
   } catch (err) {
-    console.error("[CINE-CLUB] Impossible de créer l'événement Discord natif :", err);
+    console.error("[SEANCES-CINE] Impossible de créer l'événement Discord natif :", err);
   }
 
   const mention = roleId ? `<@&${roleId}> ` : '';
@@ -176,10 +199,10 @@ async function run48hWizard(interaction, message) {
     titre: fiche.titre,
     dateVu: dateSeance.toISOString(),
     posterUrl: fiche.posterUrl,
-    source: '48h',
+    source: 'libre',
   });
 
   await interaction.editReply({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
 }
 
-module.exports = { run48hWizard };
+module.exports = { runSeanceLibreWizard };

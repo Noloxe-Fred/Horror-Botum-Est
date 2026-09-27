@@ -1,7 +1,7 @@
 const config = require('../../config');
 
 // Wrapper TMDB propre au module quiz (recherche par critères via /discover,
-// différent du besoin du ciné-club qui résout un titre texte libre). Garder
+// différent du besoin des Séances Ciné qui résout un titre texte libre). Garder
 // chaque module autonome plutôt que de partager un tmdb.js commun, conformément
 // à la convention "un dossier de module = une fonctionnalité complète".
 

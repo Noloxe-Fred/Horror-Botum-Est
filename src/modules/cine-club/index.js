@@ -32,7 +32,7 @@ module.exports = {
   ],
 
   // Démarre la boucle qui vérifie chaque minute les rappels programmés par
-  // les branches "Séances Séries", "Séance 48h" et "Valider séance" de
+  // les branches "Séances Séries", "Séance Libre" et "Valider séance" de
   // /cine ("Séance à l'arrache" n'en programme aucun, c'est une annonce
   // immédiate). Les rappels survivent à un restart car ils sont persistés en
   // JSON — au redémarrage, ceux déjà passés sont envoyés au premier tick

@@ -8,7 +8,7 @@ const COULEUR_HISTORIQUE = 0x555555;
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('historique')
-    .setDescription('Affiche les derniers films/séries vus au ciné-club'),
+    .setDescription('Affiche les derniers films/séries vus aux Séances Ciné'),
 
   execute: withErrorHandling(async (interaction) => {
     await interaction.deferReply();
@@ -22,16 +22,16 @@ module.exports = {
       const emoji = e.mediaType === 'tv' ? '📺' : '🎬';
       const date = new Date(e.dateVu).toLocaleDateString('fr-FR');
       const origine =
-        e.source === 'arrache' ? ' _(à l\'arrache)_' : e.source === '48h' ? ' _(séance 48h)_' : '';
+        e.source === 'arrache' ? ' _(à l\'arrache)_' : e.source === 'libre' ? ' _(séance libre)_' : e.source === '48h' ? ' _(séance 48h)_' : '';
       return `${emoji} **${e.titre}** — vu le ${date}${origine}`;
     });
 
     const container = buildListeContainer({
-      titre: '🗂️ Historique ciné-club',
+      titre: '🗂️ Historique Séances Ciné',
       lignes,
       couleur: COULEUR_HISTORIQUE,
     });
 
     await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
-  }, 'CINE-CLUB-HISTORIQUE'),
+  }, 'SEANCES-CINE-HISTORIQUE'),
 };

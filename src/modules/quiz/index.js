@@ -4,7 +4,7 @@ const service = require('./service');
 // Vérification périodique des paliers en attente. Les paliers sont espacés
 // de 2 jours (voir DELAI_PALIER_MS dans service.js), un check toutes les
 // 15 minutes est largement suffisant (pas besoin d'une boucle à la minute
-// comme les rappels du ciné-club).
+// comme les rappels des Séances Ciné).
 const INTERVALLE_SCHEDULER_MS = 15 * 60 * 1000;
 
 module.exports = {

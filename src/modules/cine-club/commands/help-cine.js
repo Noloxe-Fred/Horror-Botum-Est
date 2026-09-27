@@ -28,11 +28,11 @@ const COMMANDES = [
   },
   {
     nom: '/cine',
-    acces: 'Rôle streamer, salon ciné-club uniquement',
+    acces: 'Rôle streamer, salon Séances Ciné uniquement',
     description:
       'Point d\'entrée unique pour organiser une séance, avec 4 branches : Séances Séries ' +
-      '(recherche TMDB, séance lundi prochain), Séance à l\'arrache (ce soir), Séance 48h ' +
-      '(surlendemain, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
+      '(recherche TMDB, séance lundi prochain), Séance à l\'arrache (ce soir), Séance Libre ' +
+      '(jour au choix sur les 5 prochains jours, heure libre, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
       'suivante (films de la watchlist ou recherche TMDB, sondage de date mardi/vendredi/samedi, puis bouton "Valider séance" réservé ' +
       'admin/rôle streamer pour finaliser et créer l\'event).',
   },
@@ -44,23 +44,23 @@ const COMMANDES = [
   {
     nom: '/historique',
     acces: 'Tout le monde',
-    description: 'Affiche les derniers films/séries vus au ciné-club.',
+    description: 'Affiche les derniers films/séries vus aux Séances Ciné.',
   },
 ];
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help-cine')
-    .setDescription('Affiche la liste des commandes du ciné-club et leur usage'),
+    .setDescription('Affiche la liste des commandes des Séances Ciné et leur usage'),
 
   execute: withErrorHandling(async (interaction) => {
     const container = new ContainerBuilder().setAccentColor(COULEUR_HELP);
 
     container.addTextDisplayComponents((t) =>
       t.setContent(
-        '# 🎬 Commandes du Ciné-Club\n' +
+        '# 🎬 Commandes des Séances Ciné\n' +
           'Watchlist ouverte à tout le monde. `/cine` est réservée au rôle streamer ' +
-          'et au salon ciné-club dédié.'
+          'et au salon Séances Ciné dédié.'
       )
     );
 
@@ -72,5 +72,5 @@ module.exports = {
     }
 
     await interaction.reply({ flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral, components: [container] });
-  }, 'CINE-CLUB-HELP'),
+  }, 'SEANCES-CINE-HELP'),
 };

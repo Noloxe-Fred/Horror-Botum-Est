@@ -30,8 +30,8 @@ obligatoires, le reste optionnel (le bot démarre avec des warnings si absent).
   persistant si besoin), `commands/*.js`.
 
 Modules existants : `moderation` (purge/addpurge), `quiz` (quiz-affiche-floutée,
-pixélisation Jimp + TMDB), `cine-club` (commande unique `/cine` — formulaire à
-boutons vers 4 branches : Séances Séries, Séance à l'arrache, Séance 48h,
+pixélisation Jimp + TMDB), `cine-club` (« Séances Ciné » côté Discord ; commande unique `/cine` — formulaire à
+boutons vers 4 branches : Séances Séries, Séance à l'arrache, Séance Libre,
 Séances Ciné semaine suivante ; logique de chaque branche dans
 `src/modules/cine-club/wizards/`, intégration TMDB), `forbidden-word` (stub
 vide, pas encore implémenté).

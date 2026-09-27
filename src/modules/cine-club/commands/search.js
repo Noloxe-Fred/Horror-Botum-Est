@@ -33,5 +33,5 @@ module.exports = {
     const container = buildFicheContainer(fiche);
 
     await message.edit({ content: null, embeds: [], flags: MessageFlags.IsComponentsV2, components: [container] });
-  }, 'CINE-CLUB-SEARCH'),
+  }, 'SEANCES-CINE-SEARCH'),
 };

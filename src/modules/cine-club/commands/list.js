@@ -14,7 +14,7 @@ function trierEntrees(entrees, tri) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('list')
-    .setDescription('Liste la watchlist ciné-club')
+    .setDescription('Liste la watchlist Séances Ciné')
     .addStringOption((option) =>
       option
         .setName('type')
@@ -64,11 +64,11 @@ module.exports = {
       entrees.length > 25 ? `+${entrees.length - 25} autre(s) titre(s) non affiché(s) — affine les filtres.` : null;
 
     const container = buildListeContainer({
-      titre: `Watchlist ciné-club (${entrees.length} titre${entrees.length > 1 ? 's' : ''})`,
+      titre: `Watchlist Séances Ciné (${entrees.length} titre${entrees.length > 1 ? 's' : ''})`,
       lignes,
       footer,
     });
 
     await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
-  }, 'CINE-CLUB-LIST'),
+  }, 'SEANCES-CINE-LIST'),
 };

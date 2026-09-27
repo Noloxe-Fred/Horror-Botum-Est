@@ -133,7 +133,7 @@ function nomFichierManche(session) {
  * initial (avec `files`) et aux éditions du compteur de réponses (les pièces
  * jointes déjà présentes sur le message sont conservées).
  */
-function construireContainerManche(session, { mention = '', nbReponses = 0 } = {}) {
+function construireContainerManche(session, { mention = '', nbReponses = 0, trouveurs = [] } = {}) {
   const nomFichier = nomFichierManche(session);
   const container = new ContainerBuilder().setAccentColor(COULEUR_QUIZ);
 
@@ -150,6 +150,9 @@ function construireContainerManche(session, { mention = '', nbReponses = 0 } = {
     t.setContent("Devine le film d'horreur à partir de cette affiche. Plus elle se précise, moins tu marques de points !")
   );
   container.addTextDisplayComponents((t) => t.setContent(`-# ${formaterCompteurReponses(nbReponses)}`));
+  if (trouveurs.length > 0) {
+    container.addTextDisplayComponents((t) => t.setContent(`✅ **Déjà trouvé par :** ${trouveurs.join(', ')}`));
+  }
   separateur(container);
 
   container.addActionRowComponents((row) =>
@@ -173,22 +176,25 @@ async function posterCarteManche(channel, session, buffer) {
   const container = construireContainerManche(session, {
     mention: mentionRoleQuiz(),
     nbReponses: store.compterReponses(session.roundId),
+    trouveurs: store.getNomsTrouveurs(session.roundId),
   });
   const message = await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container], files: [attachment] });
   store.setSession({ ...session, messageId: message.id });
 }
 
 /**
- * Réédite la carte du palier courant avec le compteur de réponses à jour.
- * Les éditions ne re-mentionnent pas le rôle (Discord ne ping qu'à l'envoi).
+ * Réédite la carte du palier courant avec le compteur de réponses et la
+ * liste des joueurs ayant trouvé à jour. Les éditions ne re-mentionnent pas
+ * le rôle (Discord ne ping qu'à l'envoi).
  */
-async function majCompteurReponses(client, session) {
+async function majCarteManche(client, session) {
   if (!session.messageId) return; // session créée avant l'ajout du compteur
   const channel = await client.channels.fetch(config.channels.quizId);
   const message = await channel.messages.fetch(session.messageId);
   const container = construireContainerManche(session, {
     mention: mentionRoleQuiz(),
     nbReponses: store.compterReponses(session.roundId),
+    trouveurs: store.getNomsTrouveurs(session.roundId),
   });
   await message.edit({ components: [container] });
 }
@@ -413,23 +419,28 @@ async function gererSoumissionReponse(interaction) {
 
   const correct = reponseCorrecte(reponseBrute, [session.titre, session.titreOriginal]);
 
-  // Non bloquant : un échec d'édition du compteur ne doit pas empêcher la
+  // Non bloquant : un échec d'édition de la carte ne doit pas empêcher la
   // réponse au joueur.
-  majCompteurReponses(interaction.client, session).catch((err) => {
-    console.error('[QUIZ] Impossible de mettre à jour le compteur de réponses :', err);
-  });
+  const rafraichirCarte = () =>
+    majCarteManche(interaction.client, session).catch((err) => {
+      console.error('[QUIZ] Impossible de mettre à jour la carte de la manche :', err);
+    });
 
   if (!correct) {
+    rafraichirCarte();
     return interaction.reply({ content: '❌ Mauvaise réponse, retente !', ephemeral: true });
   }
 
   const points = 5 - session.stage;
   store.enregistrerTrouvaille(roundId, interaction.user.id, interaction.user.tag, {
+    // Pseudo serveur si dispo, sinon nom d'affichage global du compte.
+    displayName: interaction.member?.displayName ?? interaction.user.displayName,
     stage: session.stage,
     points,
     tentatives: nbTentatives,
   });
   store.ajouterPoints(interaction.user.id, interaction.user.tag, points);
+  rafraichirCarte(); // après enregistrerTrouvaille, pour inclure ce joueur dans la liste
 
   await interaction.reply({
     content: `✅ Bonne réponse ! +${points} point${points > 1 ? 's' : ''} (palier ${session.stage}/4).`,

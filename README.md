@@ -116,7 +116,9 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   par le joueur) et ne révèle jamais le titre en cas d'erreur.
 - La carte du palier en cours affiche un compteur des réponses données
   (toutes tentatives confondues), mis à jour à chaque réponse ; le total
-  final est rappelé sur le reveal.
+  final est rappelé sur le reveal. Elle liste aussi, dans l'ordre, le
+  pseudo serveur (displayName) des joueurs ayant déjà trouvé la bonne
+  réponse (liste reprise sur les cartes des paliers suivants).
 - Chaque bonne réponse est annoncée publiquement dans `QUIZ_RESPONSE_CHANNEL_ID`
   (pseudo, palier atteint, points gagnés, nombre de tentatives) — sans jamais
   répéter le texte proposé ni le titre.

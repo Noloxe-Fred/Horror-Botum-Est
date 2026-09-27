@@ -46,11 +46,28 @@ function aDejaTrouve(roundId, userId) {
   return Boolean(data[roundId]?.[userId]?.found);
 }
 
-function enregistrerTrouvaille(roundId, userId, tag, { stage, points, tentatives }) {
+function enregistrerTrouvaille(roundId, userId, tag, { displayName, stage, points, tentatives }) {
   const data = getToutesLesTentatives();
   if (!data[roundId]) data[roundId] = {};
-  data[roundId][userId] = { tag, count: tentatives, found: { stage, points, tentatives } };
+  data[roundId][userId] = {
+    tag,
+    displayName,
+    count: tentatives,
+    found: { stage, points, tentatives, foundAt: Date.now() },
+  };
   jsonStore.write(NS_TENTATIVES, data);
+}
+
+/**
+ * Noms affichés (displayName, repli sur le tag) des joueurs ayant trouvé la
+ * bonne réponse, dans l'ordre chronologique — affichés sur la carte du palier.
+ */
+function getNomsTrouveurs(roundId) {
+  const data = getToutesLesTentatives();
+  return Object.values(data[roundId] || {})
+    .filter((e) => e.found)
+    .sort((a, b) => (a.found.foundAt || 0) - (b.found.foundAt || 0))
+    .map((e) => e.displayName || e.tag);
 }
 
 /**
@@ -141,6 +158,7 @@ module.exports = {
   aDejaTrouve,
   enregistrerTrouvaille,
   getGagnants,
+  getNomsTrouveurs,
   compterReponses,
   clearTentatives,
   getEtatCycle,

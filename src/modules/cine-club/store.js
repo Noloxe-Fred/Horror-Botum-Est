@@ -199,7 +199,7 @@ function togglePresence(sessionKey, user) {
   const etaitPresent = Boolean(entry.users[user.id]);
 
   if (etaitPresent) delete entry.users[user.id];
-  else entry.users[user.id] = user.tag;
+  else entry.users[user.id] = user.nom;
 
   all[sessionKey] = entry;
   jsonStore.write(NS_PRESENCES, all);
@@ -213,7 +213,9 @@ function getPresenceCount(sessionKey) {
 }
 
 /**
- * Renvoie la liste des tags des présents pour une session, triée par ordre
+ * Renvoie la liste des noms affichés (displayName au moment de
+ * l'inscription ; tag pour les inscriptions plus anciennes) des présents
+ * pour une session, triée par ordre
  * alphabétique — utilisée pour afficher la liste dans la carte Components V2
  * (reconstruite à chaque clic sur "Je serai présent").
  */

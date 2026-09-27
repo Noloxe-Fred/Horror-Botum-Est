@@ -57,7 +57,7 @@ module.exports = {
       const noteTxt = e.voteAverage ? `⭐ ${e.voteAverage}/10` : '⭐ N/A';
       const dureeTxt = e.duree ? `⏱️ ${e.duree} min` : '⏱️ N/A';
       const emoji = e.mediaType === 'tv' ? '📺' : '🎬';
-      return `**${i + 1}.** ${emoji} **${e.titre}**\n${noteTxt}   ·   ${dureeTxt}   ·   proposé par ${e.proposePar.tag}`;
+      return `**${i + 1}.** ${emoji} **${e.titre}**\n${noteTxt}   ·   ${dureeTxt}   ·   proposé par ${e.proposePar.displayName || e.proposePar.tag}`;
     });
 
     const footer =

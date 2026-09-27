@@ -1000,7 +1000,8 @@ async function handlePresenceButton(interaction) {
 
   const { isPresent, count } = store.togglePresence(sessionKey, {
     id: interaction.user.id,
-    tag: interaction.user.tag,
+    // Pseudo serveur si dispo, sinon nom d'affichage global du compte.
+    nom: interaction.member?.displayName ?? interaction.user.displayName,
   });
   const presentsList = store.getPresenceList(sessionKey);
 

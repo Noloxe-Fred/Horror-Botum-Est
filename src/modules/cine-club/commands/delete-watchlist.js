@@ -43,7 +43,7 @@ function construireVue(entrees, page, entete = '') {
     .addOptions(
       tranche.map((e) => ({
         label: `${e.mediaType === 'tv' ? '📺' : '🎬'} ${e.titre}`.slice(0, 100),
-        description: `Proposé par ${e.proposePar?.tag || 'inconnu'}`.slice(0, 100),
+        description: `Proposé par ${e.proposePar?.displayName || e.proposePar?.tag || 'inconnu'}`.slice(0, 100),
         value: cle(e),
       }))
     );

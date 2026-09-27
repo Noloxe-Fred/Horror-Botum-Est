@@ -26,7 +26,12 @@ function construireEntreeWatchlist(fiche, interaction) {
     duree: fiche.duree,
     genres: fiche.genres,
     dateAjout: new Date().toISOString(),
-    proposePar: { id: interaction.user.id, tag: interaction.user.tag },
+    proposePar: {
+      id: interaction.user.id,
+      tag: interaction.user.tag,
+      // Pseudo serveur si dispo, sinon nom d'affichage global du compte.
+      displayName: interaction.member?.displayName ?? interaction.user.displayName,
+    },
   };
 }
 
@@ -64,7 +69,7 @@ module.exports = {
       return message.edit({
         content:
           `❌ **${fiche.titre}** est déjà dans la watchlist — proposé par ` +
-          `**${dejaEnWatchlist.proposePar.tag}** le ${new Date(dejaEnWatchlist.dateAjout).toLocaleDateString('fr-FR')}.`,
+          `**${dejaEnWatchlist.proposePar.displayName || dejaEnWatchlist.proposePar.tag}** le ${new Date(dejaEnWatchlist.dateAjout).toLocaleDateString('fr-FR')}.`,
         embeds: [],
         components: [],
       });
@@ -99,7 +104,7 @@ module.exports = {
         const entree = store.addToWatchlist(construireEntreeWatchlist(fiche, interaction));
         const container = prependTextDisplay(
           buildFicheContainer(fiche),
-          `✅ **${entree.titre}** ajouté à la watchlist (proposé par ${interaction.user.tag}).`
+          `✅ **${entree.titre}** ajouté à la watchlist (proposé par ${entree.proposePar.displayName}).`
         );
         return choix.update({
           content: null,
@@ -116,7 +121,7 @@ module.exports = {
     const entree = store.addToWatchlist(construireEntreeWatchlist(fiche, interaction));
     const container = prependTextDisplay(
       buildFicheContainer(fiche),
-      `✅ **${entree.titre}** ajouté à la watchlist (proposé par ${interaction.user.tag}).`
+      `✅ **${entree.titre}** ajouté à la watchlist (proposé par ${entree.proposePar.displayName}).`
     );
     await message.edit({
       content: null,

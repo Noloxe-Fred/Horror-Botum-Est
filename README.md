@@ -128,6 +128,9 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
 - Points selon le palier où la bonne réponse a été trouvée : **4** (palier 1),
   **3** (palier 2), **2** (palier 3), **1** (palier 4). Une seule réponse
   comptée par joueur (la première correcte).
+- Bouton **Palier suivant** sur la carte de chaque palier (réservé
+  Admin/Modérateur Quiz) pour poster le palier suivant sans attendre les
+  2 jours — sur le palier 4, il devient **Révéler la réponse**.
 - Bouton **Question suivante** sur le message de reveal (réservé
   Admin/Modérateur Quiz) pour relancer une manche immédiatement.
 - Au bout de 10 manches, un palmarès cumulé est publié puis les scores sont

@@ -160,7 +160,14 @@ function construireContainerManche(session, { mention = '', nbReponses = 0, trou
       new ButtonBuilder()
         .setCustomId(`quiz_answer:${session.roundId}`)
         .setLabel('📝 Répondre')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Primary),
+      // Réservé Admin/Modérateur Quiz (vérifié dans le handler) : passe au
+      // palier suivant sans attendre les 2 jours. Le stage dans le customId
+      // rend inopérant ce bouton sur les cartes des paliers déjà dépassés.
+      new ButtonBuilder()
+        .setCustomId(`quiz_skip:${session.roundId}:${session.stage}`)
+        .setLabel(session.stage < 4 ? '⏭️ Palier suivant' : '⏭️ Révéler la réponse')
+        .setStyle(ButtonStyle.Secondary)
     )
   );
 
@@ -319,14 +326,30 @@ async function demarrerNouvelleManche(client, startedBy) {
   return true;
 }
 
+// Verrou en mémoire : empêche le scheduler et le bouton "Palier suivant"
+// d'avancer la même manche deux fois en parallèle (double post).
+let avancementEnCours = false;
+
 /**
  * Vérifie si la manche en cours doit avancer d'un palier (ou passer au
- * reveal). Appelée périodiquement par le scheduler démarré dans init().
+ * reveal). Appelée périodiquement par le scheduler démarré dans init(), et
+ * avec `force` par le bouton "Palier suivant" pour ignorer le délai.
+ * Renvoie `true` si la manche a avancé.
  */
-async function avancerManche(client) {
+async function avancerManche(client, { force = false } = {}) {
+  if (avancementEnCours) return false;
+  avancementEnCours = true;
+  try {
+    return await avancerMancheSansVerrou(client, force);
+  } finally {
+    avancementEnCours = false;
+  }
+}
+
+async function avancerMancheSansVerrou(client, force) {
   const session = store.getSession();
-  if (!session) return;
-  if (Date.now() < session.nextStageAt) return;
+  if (!session) return false;
+  if (!force && Date.now() < session.nextStageAt) return false;
 
   const channel = await client.channels.fetch(config.channels.quizId);
 
@@ -339,7 +362,7 @@ async function avancerManche(client) {
     store.setSession(sessionMaj);
 
     await posterCarteManche(channel, sessionMaj, buffer);
-    return;
+    return true;
   }
 
   // --- Palier 4 écoulé -> reveal de la réponse ---
@@ -368,6 +391,8 @@ async function avancerManche(client) {
     });
     store.reinitialiserCycle();
   }
+
+  return true;
 }
 
 // --- Handlers boutons / modal (exportés vers index.js) -------------------
@@ -478,6 +503,27 @@ async function gererBoutonQuestionSuivante(interaction) {
   await interaction.editReply('✅ Nouvelle manche lancée !');
 }
 
+async function gererBoutonPalierSuivant(interaction) {
+  if (!(await requireAnyRole(interaction, rolesAutorises(), { label: ROLES_AUTORISES_LABEL }))) return;
+
+  const [, roundId, stage] = interaction.customId.split(':');
+  const session = store.getSession();
+
+  if (!session || session.roundId !== roundId || String(session.stage) !== stage) {
+    return interaction.reply({ content: '❌ Ce palier est déjà dépassé.', ephemeral: true });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const avancee = await avancerManche(interaction.client, { force: true });
+
+  if (!avancee) {
+    return interaction.editReply("❌ La manche est déjà en train d'avancer, réessaie dans un instant.");
+  }
+
+  await interaction.editReply(session.stage < 4 ? '✅ Palier suivant posté !' : '✅ Réponse révélée !');
+}
+
 module.exports = {
   rolesAutorises,
   ROLES_AUTORISES_LABEL,
@@ -486,4 +532,5 @@ module.exports = {
   gererBoutonRepondre,
   gererSoumissionReponse,
   gererBoutonQuestionSuivante,
+  gererBoutonPalierSuivant,
 };

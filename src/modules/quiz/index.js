@@ -18,6 +18,7 @@ module.exports = {
   buttons: [
     { prefix: 'quiz_answer', execute: service.gererBoutonRepondre },
     { prefix: 'quiz_next', execute: service.gererBoutonQuestionSuivante },
+    { prefix: 'quiz_skip', execute: service.gererBoutonPalierSuivant },
   ],
 
   modals: [{ prefix: 'quiz_modal', execute: service.gererSoumissionReponse }],

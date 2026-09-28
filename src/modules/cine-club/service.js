@@ -988,14 +988,21 @@ async function handleValiderSeanceButton(interaction) {
 /**
  * Handler du bouton "Je serai présent" (customId `cine_presence:<sessionKey>`).
  * Toggle la présence de l'utilisateur, reconstruit la carte séance avec le
- * compteur à jour, et édite le message en place via interaction.update().
+ * compteur à jour, et édite le message en place.
+ *
+ * L'interaction est acquittée (deferUpdate) avant toute modification du
+ * store : si Discord la rejette (délai de 3 s dépassé -> 10062 Unknown
+ * interaction), la présence n'est pas basculée, sinon l'utilisateur serait
+ * inscrit sans que la carte le montre, et son clic suivant le désinscrirait.
  */
 async function handlePresenceButton(interaction) {
+  await interaction.deferUpdate();
+
   const sessionKey = interaction.customId.split(':').slice(1).join(':');
   const annonce = store.getAnnonce(sessionKey);
 
   if (!annonce) {
-    return interaction.reply({ content: '❌ Cette annonce est introuvable (trop ancienne ?).', ephemeral: true });
+    return interaction.followUp({ content: '❌ Cette annonce est introuvable (trop ancienne ?).', ephemeral: true });
   }
 
   const { isPresent, count } = store.togglePresence(sessionKey, {
@@ -1019,7 +1026,7 @@ async function handlePresenceButton(interaction) {
     eventId: annonce.eventId,
   });
 
-  await interaction.update({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
   await interaction.followUp({
     content: isPresent ? '✅ Tu es marqué présent !' : '❌ Ta présence a été retirée.',
     ephemeral: true,

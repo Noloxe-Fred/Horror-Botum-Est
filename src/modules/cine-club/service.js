@@ -686,7 +686,7 @@ function roleIdPourTypeSeance(typeSeanceId) {
 }
 
 /**
- * Programme les 3 rappels (J-1, H-1, H-15) pour une séance donnée.
+ * Programme les 2 rappels (J-1, H-1) pour une séance donnée.
  * Persistés en JSON pour survivre à un restart — voir init() du module
  * qui recharge et vérifie les rappels en attente au démarrage.
  */
@@ -694,7 +694,6 @@ function programmerRappels({ channelId, roleId, titre, dateSeance }) {
   const echeances = [
     { offsetMs: 24 * 60 * 60 * 1000, label: 'demain' },
     { offsetMs: 60 * 60 * 1000, label: "dans 1h" },
-    { offsetMs: 15 * 60 * 1000, label: 'dans 15 minutes' },
   ];
 
   const items = echeances.map(({ offsetMs, label }, index) => ({
@@ -707,7 +706,7 @@ function programmerRappels({ channelId, roleId, titre, dateSeance }) {
   }));
 
   // On ne programme pas les rappels déjà passés (ex: /host lancé la veille
-  // au soir pour une séance le lendemain matin — H-15 aurait un sens mais
+  // au soir pour une séance le lendemain matin — H-1 aurait un sens mais
   // pas J-1).
   const futurs = items.filter((i) => i.triggerAt > Date.now());
   store.addReminders(futurs);
@@ -951,7 +950,7 @@ async function handleValiderSeanceButton(interaction) {
 
   await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
 
-  // --- Rappels J-1 / H-1 / H-15 ---
+  // --- Rappels J-1 / H-1 ---
   programmerRappels({
     channelId: targetChannelId,
     roleId,

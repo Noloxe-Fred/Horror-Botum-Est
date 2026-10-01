@@ -59,10 +59,13 @@ function findInHistorique(tmdbId, mediaType) {
   return matches.length ? matches[matches.length - 1] : null;
 }
 
+// Un titre programmé (= vu) quitte la watchlist, quelle que soit la branche
+// de /cine qui l'a programmé.
 function addToHistorique(entry) {
   const data = getHistorique();
   data.entries.push(entry);
   jsonStore.write(NS_HISTORIQUE, data);
+  if (findInWatchlist(entry.tmdbId, entry.mediaType)) removeFromWatchlist(entry.tmdbId, entry.mediaType);
   return entry;
 }
 

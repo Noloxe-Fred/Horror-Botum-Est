@@ -42,13 +42,26 @@ function ligneCredits(fiche) {
 }
 
 /**
- * Ligne "stats" (note / durée / pays), commune à la fiche et à la carte
- * séance. La durée n'est affichée que pour un film (décision explicite —
- * TMDB ne donne qu'une durée moyenne d'épisode pour une série, jugée peu
- * pertinente ici).
+ * Date TMDB "AAAA-MM-JJ" -> "12 mars 1982". Formatée en UTC : la date TMDB
+ * est un jour calendaire, sans heure, qu'aucun fuseau ne doit décaler.
+ */
+function formatDateSortie(dateSortie) {
+  if (!dateSortie) return null;
+  const date = new Date(`${dateSortie}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+}
+
+/**
+ * Ligne "stats" (date de sortie / note / durée / pays), commune à la fiche
+ * et à la carte séance. La durée n'est affichée que pour un film (décision
+ * explicite — TMDB ne donne qu'une durée moyenne d'épisode pour une série,
+ * jugée peu pertinente ici).
  */
 function ligneStats(fiche) {
+  const dateSortie = formatDateSortie(fiche.dateSortie);
   const parties = [
+    dateSortie ? `📅 ${dateSortie}` : null,
     fiche.voteAverage ? `⭐ ${fiche.voteAverage}/10` : null,
     fiche.mediaType !== 'tv' && fiche.duree ? `⏱️ ${fiche.duree} min` : null,
     fiche.pays ? `🌍 ${fiche.pays}` : null,

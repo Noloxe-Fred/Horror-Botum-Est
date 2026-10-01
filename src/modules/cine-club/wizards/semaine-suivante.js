@@ -1,4 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const config = require('../../../config');
 const store = require('../store');
 const tmdb = require('../tmdb');
 const { creneauxFilmSemaineSuivante } = require('../dateUtils');
@@ -112,6 +113,13 @@ async function runSemaineSuivanteWizard(interaction, message) {
   // affichée (pas de réaction, rien à voter sur le film). Aléatoire/Manuel :
   // chaque candidat reçoit sa fiche + une réaction numérotée pour voter.
   const avecVote = mode === 'random' || mode === 'manual';
+  // Les fiches sont en Components V2 (pas de `content` possible) : la
+  // mention du rôle part dans un message texte juste avant le sondage.
+  const roleId = config.cineClub.roles.seancesCine;
+  await interaction.channel.send({
+    content: `${roleId ? `<@&${roleId}> ` : ''}📊 **Nouveau sondage Séances Ciné** — votez pour la séance de la semaine prochaine !`,
+    allowedMentions: { roles: roleId ? [roleId] : [] },
+  });
   await posterFichesCandidats(interaction.channel, candidats, { avecVote });
   await posterSondageDate(interaction.channel, { ...donneesPoll, votesCreneaux: {} }, pollId);
 

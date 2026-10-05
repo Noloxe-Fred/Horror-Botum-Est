@@ -16,6 +16,9 @@ const { rendreProgramme } = require('./render');
 
 const INTERVALLE_MS = 60 * 1000;
 const TIMEOUT_AFFICHE_MS = 10 * 1000;
+// Discord réduit les images dans le salon : petite ligne sous la dernière
+// image pour inviter à cliquer (message à part, toujours le dernier).
+const TEXTE_AGRANDIR = "-# 🔍 Cliquez sur une image pour l'agrandir";
 
 // File d'attente : le tick et /programme-cine ne doivent jamais publier en
 // même temps (sinon messages en double).
@@ -122,9 +125,11 @@ function publierProgramme(client, { forcer = false } = {}) {
 
     const etat = store.getProgramme();
     let anciensIds = etat.messageIds || [];
+    let texteId = etat.texteId || null;
     if (forcer || etat.channelId !== channelId) {
-      await supprimerMessages(client, etat.channelId, anciensIds);
+      await supprimerMessages(client, etat.channelId, [...anciensIds, texteId].filter(Boolean));
       anciensIds = [];
+      texteId = null;
     }
 
     let messageIds;
@@ -136,7 +141,16 @@ function publierProgramme(client, { forcer = false } = {}) {
       messageIds = await mettreAJourMessages(channel, [], piecesJointes(buffers));
     }
 
-    store.setProgramme({ channelId, messageIds, signature: signature(annonces) });
+    // La ligne "Cliquez pour agrandir" doit rester sous la dernière image :
+    // repostée si une image a été ajoutée après elle ou si elle a disparu.
+    const imageAjoutee = messageIds.some((id) => !anciensIds.includes(id));
+    const texteExiste = texteId && (await channel.messages.fetch(texteId).then(() => true, () => false));
+    if (imageAjoutee || !texteExiste) {
+      if (texteId) await channel.messages.delete(texteId).catch(() => {});
+      texteId = (await channel.send({ content: TEXTE_AGRANDIR })).id;
+    }
+
+    store.setProgramme({ channelId, messageIds, texteId, signature: signature(annonces) });
     return { seances: annonces.length, images: buffers.length };
   });
 }

@@ -145,7 +145,9 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   type Film/Série, année, titre, synopsis tronqué, date et heure. Affichée
   dans `CINE_CLUB_CHANNEL_PROGRAMME_ID`.
 - 4 séances sur la première image (sous l'en-tête « Séances Ciné »), puis
-  5 par image supplémentaire, sans en-tête — un message par image.
+  5 par image supplémentaire, sans en-tête — un message par image, suivi
+  d'une petite ligne « Cliquez sur une image pour l'agrandir » (Discord
+  réduit les images dans le salon ; reposté si besoin pour rester en bas).
 - `/programme-cine` (Admin ou rôle Modo `QUIZ_MOD_ROLE_ID`) supprime les anciennes images
   et republie le programme. À lancer la première fois (la mise à jour
   automatique reste inactive tant qu'elle n'a jamais été lancée) ou en cas

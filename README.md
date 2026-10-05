@@ -138,6 +138,28 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
 - Dépendance ajoutée : [`jimp`](https://www.npmjs.com/package/jimp) (pur JS,
   pas de binaire natif à compiler) pour la pixélisation des affiches.
 
+## Séances Ciné — programme en image
+
+- Une image façon programme de cinéma grindhouse liste toutes les séances
+  annoncées (toutes branches de `/cine`) pas encore commencées : affiche,
+  type Film/Série, année, titre, synopsis tronqué, date et heure. Affichée
+  dans `CINE_CLUB_CHANNEL_PROGRAMME_ID`.
+- 4 séances sur la première image (sous l'en-tête « Séances Ciné »), puis
+  5 par image supplémentaire, sans en-tête — un message par image.
+- `/programme-cine` (Admin ou rôle Modo `QUIZ_MOD_ROLE_ID`) supprime les anciennes images
+  et republie le programme. À lancer la première fois (la mise à jour
+  automatique reste inactive tant qu'elle n'a jamais été lancée) ou en cas
+  de bug.
+- Ensuite, un tick par minute régénère l'image dès que la liste des séances
+  à venir change (nouvelle séance annoncée, séance commencée) en **éditant**
+  les messages existants (ajout/suppression des images en plus ou en moins).
+  Si un message a été supprimé à la main, tout est republié.
+- Code : `src/modules/cine-club/programme/` (`render.js` dessin
+  [`@napi-rs/canvas`](https://www.npmjs.com/package/@napi-rs/canvas), binaire
+  précompilé, aucune dépendance système ; `service.js` publication ; polices
+  Anton, Creepster et Special Elite dans `fonts/`). État persistant :
+  `data-store/cine-club-programme.json`.
+
 ## Letterboxd
 
 - `/scan-letterbox` (admin) lit **tout** l'historique du salon

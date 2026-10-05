@@ -46,6 +46,13 @@ const COMMANDES = [
     acces: 'Tout le monde',
     description: 'Affiche les derniers films/séries vus aux Séances Ciné.',
   },
+  {
+    nom: '/programme-cine',
+    acces: 'Admin ou rôle Modérateur',
+    description:
+      'Publie le programme en image (séances annoncées pas encore diffusées) dans le salon dédié. ' +
+      'À lancer la première fois ou en cas de bug : ensuite il se met à jour tout seul.',
+  },
 ];
 
 module.exports = {

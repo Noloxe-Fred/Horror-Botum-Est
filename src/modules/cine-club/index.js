@@ -6,6 +6,8 @@ const cine = require('./commands/cine');
 const serieEnCours = require('./commands/serie-en-cours');
 const historique = require('./commands/historique');
 const helpCine = require('./commands/help-cine');
+const programmeCine = require('./commands/programme-cine');
+const { demarrerSchedulerProgramme } = require('./programme/service');
 const {
   demarrerSchedulerRappels,
   handlePresenceButton,
@@ -16,7 +18,7 @@ const {
 
 module.exports = {
   name: 'cine-club',
-  commands: [search, add, list, deleteWatchlist, cine, serieEnCours, historique, helpCine],
+  commands: [search, add, list, deleteWatchlist, cine, serieEnCours, historique, helpCine, programmeCine],
 
   // Boutons persistants sur les annonces (carte séance) et les sondages
   // /cine — survivent à un redémarrage du bot puisqu'ils sont dispatchés par
@@ -37,7 +39,11 @@ module.exports = {
   // immédiate). Les rappels survivent à un restart car ils sont persistés en
   // JSON — au redémarrage, ceux déjà passés sont envoyés au premier tick
   // (max 60s de retard), ceux futurs attendent leur heure.
+  //
+  // Second tick par minute : tient à jour le programme en image
+  // (programme/service.js) dès que la liste des séances à venir change.
   init: (client) => {
     demarrerSchedulerRappels(client);
+    demarrerSchedulerProgramme(client);
   },
 };

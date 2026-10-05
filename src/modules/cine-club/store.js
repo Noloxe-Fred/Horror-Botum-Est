@@ -7,6 +7,7 @@ const NS_SERIE_COURANTE = 'cine-club-serie-courante';
 const NS_REMINDERS = 'cine-club-reminders';
 const NS_ANNONCES = 'cine-club-annonces';
 const NS_PRESENCES = 'cine-club-presences';
+const NS_PROGRAMME = 'cine-club-programme';
 
 function cle(tmdbId, mediaType) {
   return `${mediaType}:${tmdbId}`;
@@ -183,6 +184,31 @@ function getAnnonce(sessionKey) {
   return getAnnonces()[sessionKey] || null;
 }
 
+/**
+ * Annonces dont la séance n'a pas encore commencé, triées par date —
+ * source du programme en image (programme/service.js).
+ */
+function listAnnoncesAVenir(maintenant = Date.now()) {
+  return Object.entries(getAnnonces())
+    .map(([sessionKey, annonce]) => ({ sessionKey, ...annonce }))
+    .filter((a) => new Date(a.dateSeance).getTime() > maintenant)
+    .sort((a, b) => new Date(a.dateSeance) - new Date(b.dateSeance));
+}
+
+// --- Programme en image ---------------------------------------------------
+//
+// Messages postés dans le salon programme (un par image, dans l'ordre) et
+// signature de la liste de séances affichée, pour ne régénérer l'image que
+// quand le programme change réellement.
+
+function getProgramme() {
+  return jsonStore.read(NS_PROGRAMME, { channelId: null, messageIds: [], signature: null });
+}
+
+function setProgramme(data) {
+  jsonStore.write(NS_PROGRAMME, data);
+}
+
 // --- Présences ("Je serai présent") ---------------------------------------
 //
 // Toggle par utilisateur, stocké par session (mediaType:tmdbId:timestamp de
@@ -253,6 +279,10 @@ module.exports = {
   // annonces
   setAnnonce,
   getAnnonce,
+  listAnnoncesAVenir,
+  // programme en image
+  getProgramme,
+  setProgramme,
   // présences
   togglePresence,
   getPresenceCount,

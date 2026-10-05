@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.10",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "jimp": "^0.22.12"

@@ -740,6 +740,13 @@ function demarrerSchedulerRappels(client) {
     for (const reminder of pending) {
       if (reminder.triggerAt > maintenant) continue;
 
+      // Rappels H-15 hérités (programmés avant leur suppression, encore
+      // persistés pour des séances futures) : on les écarte sans les envoyer.
+      if (reminder.message.includes('dans 15 minutes')) {
+        store.markReminderSent(reminder.id);
+        continue;
+      }
+
       try {
         const channel = await client.channels.fetch(reminder.channelId);
         const mention = reminder.roleId ? `<@&${reminder.roleId}> ` : '';

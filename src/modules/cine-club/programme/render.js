@@ -1,6 +1,6 @@
 // Rendu PNG du programme des Séances Ciné (style "Grindhouse 70s") via
 // @napi-rs/canvas. Pur dessin : reçoit une liste de séances déjà préparées
-// (titre, type, année, synopsis, date, buffer d'affiche) et renvoie un
+// (titre, type, année, synopsis ou épisodes, date, buffer d'affiche) et renvoie un
 // Buffer PNG par image. Aucune dépendance à Discord ni au store.
 
 const path = require('path');
@@ -246,6 +246,11 @@ function dessinerTexte(ctx, seance, x, y) {
     cy += interTitre;
   }
 
+  if (seance.episodes) {
+    dessinerEpisodes(ctx, seance.episodes, x, cy - interTitre + 14, y + LIGNE_H);
+    return;
+  }
+
   // Synopsis : 18px, interligne 27, autant de lignes que la place restante
   // le permet (4 max), tronqué avec "…"
   ctx.font = '18px "Special Elite"';
@@ -257,6 +262,33 @@ function dessinerTexte(ctx, seance, x, y) {
   let sy = debutSynopsis + 20;
   for (const ligne of lignes) {
     ctx.fillText(ligne, x, sy);
+    sy += 27;
+  }
+}
+
+/**
+ * Bloc épisodes d'une séance série (à la place du synopsis) : en-tête
+ * moutarde "SAISON 2 · 3 ÉPISODES" puis un épisode par ligne, tronqué avec
+ * "…". S'il n'y a pas la place pour tous, la dernière ligne indique le
+ * nombre d'épisodes restants.
+ */
+function dessinerEpisodes(ctx, episodes, x, yDebut, yFin) {
+  ctx.font = '22px Anton';
+  ctx.fillStyle = COULEURS.moutarde;
+  const yEntete = yDebut + 24;
+  texteEspace(ctx, episodes.entete, x, yEntete, 2);
+
+  ctx.font = '18px "Special Elite"';
+  ctx.fillStyle = COULEURS.synopsis;
+  let sy = yEntete + 32;
+  const maxLignes = Math.max(1, Math.floor((yFin - sy + 20) / 27));
+  let lignes = episodes.lignes;
+  if (lignes.length > maxLignes) {
+    const reste = lignes.length - (maxLignes - 1);
+    lignes = [...lignes.slice(0, maxLignes - 1), `+ ${reste} autre${reste > 1 ? 's' : ''} épisode${reste > 1 ? 's' : ''}`];
+  }
+  for (const ligne of lignes) {
+    ctx.fillText(decouperLignes(ctx, ligne, COL_TEXTE, 1)[0], x, sy);
     sy += 27;
   }
 }
@@ -385,8 +417,9 @@ async function rendrePage(seances, { premiere, derniere }) {
  * Rend le programme complet : un Buffer PNG par image. Toujours au moins
  * une image (en-tête + message "aucune séance" si la liste est vide).
  *
- * Chaque séance : { titre, type, annee, synopsis, jour, numero, mois,
- * heure, afficheBuffer }.
+ * Chaque séance : { titre, type, annee, synopsis, episodes, jour, numero,
+ * mois, heure, afficheBuffer } — `episodes` ({ entete, lignes }, séances
+ * séries) remplace le synopsis s'il est présent.
  */
 async function rendreProgramme(seances) {
   const pages = paginer(seances);

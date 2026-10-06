@@ -31,15 +31,10 @@ const COMMANDES = [
     acces: 'Rôle streamer, salon Séances Ciné uniquement',
     description:
       'Point d\'entrée unique pour organiser une séance, avec 4 branches : Séances Séries ' +
-      '(recherche TMDB, séance lundi prochain), Séance à l\'arrache (ce soir), Séance Libre ' +
+      '(recherche TMDB, choix de la saison et des épisodes diffusés, séance lundi prochain), Séance à l\'arrache (ce soir), Séance Libre ' +
       '(jour au choix sur les 5 prochains jours, heure libre, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
       'suivante (films de la watchlist ou recherche TMDB, sondage de date mardi/vendredi/samedi, puis bouton "Valider séance" réservé ' +
       'admin/rôle streamer pour finaliser et créer l\'event).',
-  },
-  {
-    nom: '/serie-en-cours',
-    acces: 'Tout le monde, tout salon',
-    description: 'Rappelle quelle série est actuellement suivie, posté dans le salon série dédié.',
   },
   {
     nom: '/historique',

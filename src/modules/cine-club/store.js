@@ -3,7 +3,6 @@ const jsonStore = require('../../data/jsonStore');
 const NS_WATCHLIST = 'cine-club-watchlist';
 const NS_HISTORIQUE = 'cine-club-historique';
 const NS_POLLS_EN_ATTENTE = 'cine-club-polls-en-attente';
-const NS_SERIE_COURANTE = 'cine-club-serie-courante';
 const NS_REMINDERS = 'cine-club-reminders';
 const NS_ANNONCES = 'cine-club-annonces';
 const NS_PRESENCES = 'cine-club-presences';
@@ -124,17 +123,6 @@ function voterCreneau(pollId, index, userId) {
 
   jsonStore.write(NS_POLLS_EN_ATTENTE, all);
   return poll;
-}
-
-// --- Série en cours ----------------------------------------------------
-
-function getSerieCourante() {
-  return jsonStore.read(NS_SERIE_COURANTE, null);
-}
-
-function setSerieCourante(serie) {
-  jsonStore.write(NS_SERIE_COURANTE, serie);
-  return serie;
 }
 
 // --- Rappels programmés (/host) -----------------------------------------
@@ -269,9 +257,6 @@ module.exports = {
   getPollEnAttente,
   clearPollEnAttente,
   voterCreneau,
-  // série en cours
-  getSerieCourante,
-  setSerieCourante,
   // rappels
   addReminders,
   markReminderSent,

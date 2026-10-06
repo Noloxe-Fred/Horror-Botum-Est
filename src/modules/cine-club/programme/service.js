@@ -57,6 +57,16 @@ function partiesDate(date) {
   };
 }
 
+// Épisodes d'une séance série, affichés à la place du synopsis.
+function preparerEpisodes(episodes) {
+  if (!episodes || !episodes.liste.length) return null;
+  const nb = episodes.liste.length;
+  return {
+    entete: `SAISON ${episodes.saison} · ${nb} ÉPISODE${nb > 1 ? 'S' : ''}`,
+    lignes: episodes.liste.map((e) => `É${e.numero} · ${e.titre}`),
+  };
+}
+
 async function preparerSeances(annonces) {
   return Promise.all(
     annonces.map(async (a) => ({
@@ -64,6 +74,7 @@ async function preparerSeances(annonces) {
       type: a.mediaType === 'tv' ? 'Série' : 'Film',
       annee: a.fiche.dateSortie ? a.fiche.dateSortie.slice(0, 4) : null,
       synopsis: a.fiche.overview || '',
+      episodes: preparerEpisodes(a.episodes),
       ...partiesDate(new Date(a.dateSeance)),
       afficheBuffer: await telechargerAffiche(a.fiche.posterUrl),
     }))

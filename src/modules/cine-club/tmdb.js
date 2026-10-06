@@ -103,6 +103,31 @@ async function getDetails(tmdbId, mediaType) {
 }
 
 /**
+ * Saisons d'une série : saisons régulières dans l'ordre, puis les épisodes
+ * spéciaux (saison 0 chez TMDB) en dernier.
+ */
+async function getSaisons(tmdbId) {
+  const data = await tmdbFetch(`/tv/${tmdbId}`);
+  const saisons = (data.seasons || []).map((s) => ({
+    numero: s.season_number,
+    nom: s.name || `Saison ${s.season_number}`,
+    nbEpisodes: s.episode_count || 0,
+  }));
+  return [...saisons.filter((s) => s.numero > 0), ...saisons.filter((s) => s.numero === 0)];
+}
+
+/**
+ * Épisodes d'une saison : [{ numero, titre }], dans l'ordre de diffusion.
+ */
+async function getEpisodes(tmdbId, numeroSaison) {
+  const data = await tmdbFetch(`/tv/${tmdbId}/season/${numeroSaison}`);
+  return (data.episodes || []).map((e) => ({
+    numero: e.episode_number,
+    titre: e.name || `Épisode ${e.episode_number}`,
+  }));
+}
+
+/**
  * Résout un titre texte libre en fiche TMDB complète (recherche + détails).
  * Lève une erreur si aucun résultat.
  */
@@ -124,4 +149,4 @@ function urlFiche({ tmdbId, mediaType }) {
   return `https://www.themoviedb.org/${mediaType === 'tv' ? 'tv' : 'movie'}/${tmdbId}`;
 }
 
-module.exports = { searchMulti, getDetails, resolveTitle, urlFiche };
+module.exports = { searchMulti, getDetails, getSaisons, getEpisodes, resolveTitle, urlFiche };

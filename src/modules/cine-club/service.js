@@ -70,6 +70,23 @@ function ligneStats(fiche) {
 }
 
 /**
+ * Libellé court des épisodes d'une séance série ({ saison, liste }) :
+ * "S2 · Ép. 3-5, 8" — les numéros consécutifs sont regroupés en plages.
+ * Utilisé pour le nom de l'event, les rappels et le programme en image.
+ */
+function libelleEpisodesCourt({ saison, liste }) {
+  const numeros = liste.map((e) => e.numero).sort((a, b) => a - b);
+  const plages = [];
+  for (const n of numeros) {
+    const derniere = plages[plages.length - 1];
+    if (derniere && n === derniere[1] + 1) derniere[1] = n;
+    else plages.push([n, n]);
+  }
+  const texte = plages.map(([debut, fin]) => (debut === fin ? `${debut}` : `${debut}-${fin}`)).join(', ');
+  return `S${saison} · Ép. ${texte}`;
+}
+
+/**
  * Carte "fiche" Components V2 — utilisée par /search et /add pour afficher
  * un film/série unique. Remplace l'ancien embedFiche().
  */
@@ -121,6 +138,7 @@ function buildSeanceContainer({
   annonceTexte,
   guildId = null,
   eventId = null,
+  episodes = null,
 }) {
   const couleur = mediaType === 'tv' ? COULEUR_SERIE : COULEUR_FILM;
   const container = new ContainerBuilder().setAccentColor(couleur);
@@ -157,6 +175,15 @@ function buildSeanceContainer({
   }
 
   container.addTextDisplayComponents((t) => t.setContent(`**${fiche.titre}**\n${fiche.overview}`));
+
+  // Épisodes diffusés (branche "Séances Séries" uniquement).
+  if (episodes && episodes.liste.length) {
+    const nb = episodes.liste.length;
+    const lignes = episodes.liste.map((e) => `\`É${String(e.numero).padStart(2, '0')}\` ${e.titre}`);
+    container.addTextDisplayComponents((t) =>
+      t.setContent(`📺 **Saison ${episodes.saison} — ${nb} épisode${nb > 1 ? 's' : ''}**\n${lignes.join('\n')}`.slice(0, 4000))
+    );
+  }
 
   const credits = ligneCredits(fiche);
   if (credits) container.addTextDisplayComponents((t) => t.setContent(credits));
@@ -1043,6 +1070,7 @@ async function handlePresenceButton(interaction) {
     annonceTexte: annonce.annonceTexte,
     guildId: annonce.guildId,
     eventId: annonce.eventId,
+    episodes: annonce.episodes,
   });
 
   await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [container] });
@@ -1083,6 +1111,7 @@ async function handleStartEventButton(interaction) {
 module.exports = {
   buildFicheContainer,
   buildSeanceContainer,
+  libelleEpisodesCourt,
   buildListeContainer,
   prependTextDisplay,
   attendreClic,

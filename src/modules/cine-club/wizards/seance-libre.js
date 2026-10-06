@@ -184,9 +184,11 @@ async function runSeanceLibreWizard(interaction, message) {
     eventId,
   });
 
-  await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  const messageAnnonce = await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  store.majAnnonce(sessionKey, { messageId: messageAnnonce.id });
 
   programmerRappels({
+    sessionKey,
     channelId: targetChannelId,
     roleId,
     titre: fiche.titre,

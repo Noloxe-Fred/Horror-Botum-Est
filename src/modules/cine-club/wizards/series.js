@@ -243,9 +243,11 @@ async function runSeriesWizard(interaction, clicBouton, message) {
     episodes,
   });
 
-  await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  const messageAnnonce = await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  store.majAnnonce(sessionKey, { messageId: messageAnnonce.id });
 
   programmerRappels({
+    sessionKey,
     channelId: targetChannelId,
     roleId,
     titre: titreSeance,

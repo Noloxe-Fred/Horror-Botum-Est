@@ -156,7 +156,8 @@ async function runArracheWizard(interaction, clicBouton, message) {
     eventId,
   });
 
-  await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  const messageAnnonce = await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  store.majAnnonce(sessionKey, { messageId: messageAnnonce.id });
 
   // Pas de rappels programmés (annonce immédiate pour ce soir, décision
   // d'origine inchangée).

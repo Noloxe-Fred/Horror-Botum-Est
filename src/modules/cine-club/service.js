@@ -730,7 +730,7 @@ function roleIdPourTypeSeance(typeSeanceId) {
  * Persistés en JSON pour survivre à un restart — voir init() du module
  * qui recharge et vérifie les rappels en attente au démarrage.
  */
-function programmerRappels({ channelId, roleId, titre, dateSeance }) {
+function programmerRappels({ sessionKey, channelId, roleId, titre, dateSeance }) {
   const echeances = [
     { offsetMs: 24 * 60 * 60 * 1000, label: 'demain' },
     { offsetMs: 60 * 60 * 1000, label: "dans 1h" },
@@ -739,6 +739,7 @@ function programmerRappels({ channelId, roleId, titre, dateSeance }) {
   const items = echeances.map(({ offsetMs, label }, index) => ({
     id: `${dateSeance.getTime()}-${index}`,
     triggerAt: dateSeance.getTime() - offsetMs,
+    sessionKey, // permet de retirer les rappels avec la séance (/supprimer-seance)
     channelId,
     roleId,
     message: `🎬 Rappel : **${titre}** ${label} (${formatDateFr(dateSeance)}) !`,
@@ -995,10 +996,12 @@ async function handleValiderSeanceButton(interaction) {
     eventId,
   });
 
-  await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  const messageAnnonce = await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  store.majAnnonce(sessionKey, { messageId: messageAnnonce.id });
 
   // --- Rappels J-1 / H-1 ---
   programmerRappels({
+    sessionKey,
     channelId: targetChannelId,
     roleId,
     titre: fiche.titre,

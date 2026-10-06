@@ -60,13 +60,30 @@ function findInHistorique(tmdbId, mediaType) {
 }
 
 // Un titre programmé (= vu) quitte la watchlist, quelle que soit la branche
-// de /cine qui l'a programmé.
+// de /cine qui l'a programmé. L'entrée retirée est gardée dans l'historique
+// (`entreeWatchlist`, null si le titre n'y était pas) pour pouvoir la
+// restaurer si la séance est supprimée.
 function addToHistorique(entry) {
   const data = getHistorique();
-  data.entries.push(entry);
+  const entreeWatchlist = findInWatchlist(entry.tmdbId, entry.mediaType);
+  const complete = { ...entry, entreeWatchlist };
+  data.entries.push(complete);
   jsonStore.write(NS_HISTORIQUE, data);
-  if (findInWatchlist(entry.tmdbId, entry.mediaType)) removeFromWatchlist(entry.tmdbId, entry.mediaType);
-  return entry;
+  if (entreeWatchlist) removeFromWatchlist(entry.tmdbId, entry.mediaType);
+  return complete;
+}
+
+// Retire l'entrée d'historique créée à la programmation d'une séance
+// (même titre, même date). Renvoie l'entrée retirée, ou null.
+function supprimerDeHistorique({ tmdbId, mediaType, dateVu }) {
+  const data = getHistorique();
+  const index = data.entries.findIndex(
+    (e) => e.tmdbId === tmdbId && e.mediaType === mediaType && e.dateVu === dateVu
+  );
+  if (index === -1) return null;
+  const [retiree] = data.entries.splice(index, 1);
+  jsonStore.write(NS_HISTORIQUE, data);
+  return retiree;
 }
 
 function listHistorique({ limit = 15 } = {}) {
@@ -149,6 +166,21 @@ function getPendingReminders() {
   return items.filter((r) => !r.sent);
 }
 
+/**
+ * Retire les rappels d'une séance. Les rappels programmés avant l'ajout du
+ * champ `sessionKey` sont retrouvés par leur id (`<timestamp séance>-<n>`).
+ * Renvoie le nombre de rappels encore en attente qui ont été retirés.
+ */
+function supprimerRappelsSeance(sessionKey, dateSeance) {
+  const data = getReminders();
+  const prefixeId = `${new Date(dateSeance).getTime()}-`;
+  const concerne = (r) => (r.sessionKey ? r.sessionKey === sessionKey : r.id.startsWith(prefixeId));
+  const retires = data.items.filter((r) => concerne(r) && !r.sent).length;
+  data.items = data.items.filter((r) => !concerne(r));
+  jsonStore.write(NS_REMINDERS, data);
+  return retires;
+}
+
 // --- Annonces (séances /host et /arrache) --------------------------------
 //
 // Garde les données nécessaires pour reconstruire la carte Components V2
@@ -170,6 +202,21 @@ function setAnnonce(sessionKey, data) {
 
 function getAnnonce(sessionKey) {
   return getAnnonces()[sessionKey] || null;
+}
+
+// Complète une annonce existante (ex: id du message posté, connu après envoi).
+function majAnnonce(sessionKey, patch) {
+  const all = getAnnonces();
+  if (!all[sessionKey]) return null;
+  all[sessionKey] = { ...all[sessionKey], ...patch };
+  jsonStore.write(NS_ANNONCES, all);
+  return all[sessionKey];
+}
+
+function supprimerAnnonce(sessionKey) {
+  const all = getAnnonces();
+  delete all[sessionKey];
+  jsonStore.write(NS_ANNONCES, all);
 }
 
 /**
@@ -224,6 +271,12 @@ function togglePresence(sessionKey, user) {
   return { isPresent: !etaitPresent, count: Object.keys(entry.users).length };
 }
 
+function supprimerPresences(sessionKey) {
+  const all = getPresences();
+  delete all[sessionKey];
+  jsonStore.write(NS_PRESENCES, all);
+}
+
 function getPresenceCount(sessionKey) {
   const entry = getPresences()[sessionKey];
   return entry ? Object.keys(entry.users).length : 0;
@@ -251,6 +304,7 @@ module.exports = {
   // historique
   findInHistorique,
   addToHistorique,
+  supprimerDeHistorique,
   listHistorique,
   // sondages en attente de validation
   creerPollEnAttente,
@@ -261,15 +315,19 @@ module.exports = {
   addReminders,
   markReminderSent,
   getPendingReminders,
+  supprimerRappelsSeance,
   // annonces
   setAnnonce,
   getAnnonce,
+  majAnnonce,
+  supprimerAnnonce,
   listAnnoncesAVenir,
   // programme en image
   getProgramme,
   setProgramme,
   // présences
   togglePresence,
+  supprimerPresences,
   getPresenceCount,
   getPresenceList,
 };

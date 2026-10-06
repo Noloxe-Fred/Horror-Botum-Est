@@ -37,6 +37,13 @@ const COMMANDES = [
       'admin/rôle streamer pour finaliser et créer l\'event).',
   },
   {
+    nom: '/supprimer-seance',
+    acces: 'Rôle streamer',
+    description:
+      'Supprime une séance à venir, quelle que soit sa branche : annonce, évènement Discord, rappels, ' +
+      'présences, historique, et la retire du programme en image.',
+  },
+  {
     nom: '/historique',
     acces: 'Tout le monde',
     description: 'Affiche les derniers films/séries vus aux Séances Ciné.',

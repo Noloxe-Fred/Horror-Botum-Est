@@ -3,11 +3,12 @@
 // affichée dans CINE_CLUB_CHANNEL_PROGRAMME_ID — un message par image,
 // édités sur place à chaque changement plutôt que reposter.
 //
-// Mise à jour automatique : un tick par minute compare la liste des séances
-// à venir avec celle de la dernière publication (signature) et régénère si
-// elle a changé — nouvelle séance annoncée (n'importe quelle branche de
-// /cine) ou séance commencée. Inactif tant que /programme-cine n'a pas été
-// lancée une première fois.
+// Mise à jour automatique : chaque branche de /cine (et /supprimer-seance)
+// appelle rafraichirProgramme() dès la séance enregistrée, et un tick par
+// minute rattrape le reste (séance commencée...). Les deux comparent la liste
+// des séances à venir avec celle de la dernière publication (signature) et
+// ne régénèrent que si elle a changé. Inactif tant que /programme-cine n'a
+// pas été lancée une première fois.
 
 const { AttachmentBuilder } = require('discord.js');
 const config = require('../../../config');
@@ -20,17 +21,35 @@ const TIMEOUT_AFFICHE_MS = 10 * 1000;
 // image pour inviter à cliquer (message à part, toujours le dernier).
 const TEXTE_AGRANDIR = "-# 🔍 Cliquez sur une image pour l'agrandir";
 
+// Une publication bloquée (appel Discord qui ne répond jamais...) ne doit
+// pas geler la file indéfiniment : au-delà, la suivante passe quand même.
+const TIMEOUT_PUBLICATION_MS = 3 * 60 * 1000;
+
 // File d'attente : le tick et /programme-cine ne doivent jamais publier en
 // même temps (sinon messages en double).
 let file = Promise.resolve();
 function enFile(tache) {
-  const resultat = file.then(tache);
+  const resultat = file.then(() => {
+    let minuteur;
+    const delai = new Promise((_, reject) => {
+      minuteur = setTimeout(
+        () => reject(new Error(`publication du programme bloquée depuis ${TIMEOUT_PUBLICATION_MS / 1000}s`)),
+        TIMEOUT_PUBLICATION_MS
+      );
+    });
+    return Promise.race([tache(), delai]).finally(() => clearTimeout(minuteur));
+  });
   file = resultat.catch(() => {});
   return resultat;
 }
 
+// Tout ce qui est affiché change la signature : une séance supprimée puis
+// reprogrammée au même créneau (même sessionKey) avec d'autres épisodes
+// doit aussi régénérer l'image.
 function signature(annonces) {
-  return annonces.map((a) => a.sessionKey).join('|');
+  return JSON.stringify(
+    annonces.map((a) => [a.sessionKey, a.dateSeance, a.fiche && a.fiche.titre, a.fiche && a.fiche.posterUrl, a.episodes || null])
+  );
 }
 
 async function telechargerAffiche(url) {
@@ -167,21 +186,33 @@ function publierProgramme(client, { forcer = false } = {}) {
 }
 
 /**
- * Tick par minute : republie si la liste des séances à venir a changé
- * depuis la dernière publication. À appeler une seule fois au démarrage.
+ * Republie si la liste des séances à venir a changé depuis la dernière
+ * publication (sans rien faire tant que /programme-cine n'a jamais été
+ * lancée). Ne lève jamais : renvoie true si le programme a été republié,
+ * false sinon (rien à faire ou erreur, loguée). À appeler juste après
+ * avoir ajouté/supprimé une séance, pour ne pas attendre le tick.
  */
-function demarrerSchedulerProgramme(client) {
-  setInterval(async () => {
-    const etat = store.getProgramme();
-    if (!etat.messageIds || etat.messageIds.length === 0) return; // jamais lancé
-    if (signature(store.listAnnoncesAVenir()) === etat.signature) return;
+async function rafraichirProgramme(client) {
+  const etat = store.getProgramme();
+  if (!etat.messageIds || etat.messageIds.length === 0) return false; // jamais lancé
+  if (signature(store.listAnnoncesAVenir()) === etat.signature) return false;
 
-    try {
-      await publierProgramme(client);
-    } catch (err) {
-      console.error('[SEANCES-CINE][PROGRAMME] Mise à jour du programme impossible :', err);
-    }
-  }, INTERVALLE_MS);
+  try {
+    await publierProgramme(client);
+    return true;
+  } catch (err) {
+    console.error('[SEANCES-CINE][PROGRAMME] Mise à jour du programme impossible :', err);
+    return false;
+  }
 }
 
-module.exports = { publierProgramme, demarrerSchedulerProgramme };
+/**
+ * Tick par minute : rattrape les changements non signalés (séance qui
+ * commence, publication immédiate ratée...). À appeler une seule fois au
+ * démarrage.
+ */
+function demarrerSchedulerProgramme(client) {
+  setInterval(() => rafraichirProgramme(client), INTERVALLE_MS);
+}
+
+module.exports = { publierProgramme, rafraichirProgramme, demarrerSchedulerProgramme };

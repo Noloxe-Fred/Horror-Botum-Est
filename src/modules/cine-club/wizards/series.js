@@ -10,6 +10,7 @@ const {
 const config = require('../../../config');
 const tmdb = require('../tmdb');
 const store = require('../store');
+const { rafraichirProgramme } = require('../programme/service');
 const { prochainLundiA } = require('../dateUtils');
 const {
   attendreClic,
@@ -263,6 +264,9 @@ async function runSeriesWizard(interaction, clicBouton, message) {
     source: 'serie',
     episodes,
   });
+
+  // Programme en image à jour tout de suite (sans attendre le tick).
+  rafraichirProgramme(interaction.client);
 
   await interaction.editReply({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
 }

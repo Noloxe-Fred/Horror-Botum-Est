@@ -10,6 +10,7 @@ const {
 const config = require('../../../config');
 const tmdb = require('../tmdb');
 const store = require('../store');
+const { rafraichirProgramme } = require('../programme/service');
 const { prochainsJours, formatJourFr, atHeure } = require('../dateUtils');
 const {
   attendreClic,
@@ -203,6 +204,9 @@ async function runSeanceLibreWizard(interaction, message) {
     posterUrl: fiche.posterUrl,
     source: 'libre',
   });
+
+  // Programme en image à jour tout de suite (sans attendre le tick).
+  rafraichirProgramme(interaction.client);
 
   await interaction.editReply({ content: `✅ Annonce postée dans <#${targetChannelId}> !`, components: [] });
 }

@@ -20,6 +20,7 @@ const config = require('../../config');
 const { requireAnyRole, requireStreamerRole } = require('../../core/permissions');
 const store = require('./store');
 const tmdb = require('./tmdb');
+const { rafraichirProgramme } = require('./programme/service');
 const { formatDateFr, parseHeure } = require('./dateUtils');
 
 const COULEUR_FILM = 0xb8002e; // rouge horreur, cohérent avec le thème du serveur
@@ -1017,6 +1018,9 @@ async function handleValiderSeanceButton(interaction) {
     posterUrl: fiche.posterUrl,
     source: 'cine-club',
   });
+
+  // Programme en image à jour tout de suite (sans attendre le tick).
+  rafraichirProgramme(interaction.client);
 
   store.clearPollEnAttente(pollId);
 

@@ -152,8 +152,10 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   et republie le programme. À lancer la première fois (la mise à jour
   automatique reste inactive tant qu'elle n'a jamais été lancée) ou en cas
   de bug.
-- Ensuite, un tick par minute régénère l'image dès que la liste des séances
-  à venir change (nouvelle séance annoncée, séance commencée) en **éditant**
+- Ensuite, l'image est régénérée dès que la liste des séances à venir change :
+  immédiatement quand une séance est annoncée (toutes les branches de `/cine`)
+  ou supprimée (`/supprimer-seance`), et via un tick par minute pour le reste
+  (séance commencée, publication ratée). Mise à jour en **éditant**
   les messages existants (ajout/suppression des images en plus ou en moins).
   Si un message a été supprimé à la main, tout est republié.
 - Code : `src/modules/cine-club/programme/` (`render.js` dessin

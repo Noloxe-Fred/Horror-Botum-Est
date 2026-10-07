@@ -26,7 +26,7 @@ const {
   programmerRappels,
 } = require('../service');
 
-const NB_JOURS_PROPOSES = 5;
+const NB_JOURS_PROPOSES = 21; // 3 semaines (un select Discord accepte 25 options max)
 
 /**
  * Branche "Séance Libre" de /cine — programme un film à une date libre

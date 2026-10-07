@@ -32,7 +32,7 @@ const COMMANDES = [
     description:
       'Point d\'entrée unique pour organiser une séance, avec 4 branches : Séances Séries ' +
       '(recherche TMDB, choix de la saison et des épisodes diffusés, séance lundi prochain), Séance à l\'arrache (ce soir), Séance Libre ' +
-      '(jour au choix sur les 5 prochains jours, heure libre, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
+      '(jour au choix sur les 3 prochaines semaines, heure libre, watchlist ou TMDB) — ces 3 publient directement — et Séances Ciné semaine ' +
       'suivante (films de la watchlist ou recherche TMDB, sondage de date mardi/vendredi/samedi, puis bouton "Valider séance" réservé ' +
       'admin/rôle streamer pour finaliser et créer l\'event).',
   },

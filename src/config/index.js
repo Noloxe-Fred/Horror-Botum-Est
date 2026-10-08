@@ -39,6 +39,7 @@ const OPTIONAL = [
   'CINE_CLUB_CHANNEL_ARRACHE_ID',
   'CINE_CLUB_CHANNEL_SERIE_ID',
   'CINE_CLUB_CHANNEL_PROGRAMME_ID',
+  'CINE_CLUB_CHANNEL_DISCUTE_ID',
   'CINE_CLUB_STREAMER_ROLE_ID',
   'CINE_CLUB_ROLE_SEANCES_CINE_ID',
   'CINE_CLUB_ROLE_CINE_CLASSIQUES_ID',
@@ -105,6 +106,8 @@ module.exports = {
     channelSerieId: process.env.CINE_CLUB_CHANNEL_SERIE_ID || null,
     // Salon où le programme en image est affiché et tenu à jour.
     channelProgrammeId: process.env.CINE_CLUB_CHANNEL_PROGRAMME_ID || null,
+    // Salon "la-discute" : rappel du programme chaque dimanche à 18h.
+    channelDiscuteId: process.env.CINE_CLUB_CHANNEL_DISCUTE_ID || null,
     streamerRoleId: process.env.CINE_CLUB_STREAMER_ROLE_ID || null,
     roles: {
       seancesCine: process.env.CINE_CLUB_ROLE_SEANCES_CINE_ID || null,

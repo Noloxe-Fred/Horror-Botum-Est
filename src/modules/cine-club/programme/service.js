@@ -140,6 +140,16 @@ async function mettreAJourMessages(channel, anciensIds, fichiers) {
 }
 
 /**
+ * Rend le programme actuel (séances à venir) en images PNG. Partagé avec le
+ * rappel hebdomadaire (rappel-hebdo.js). Renvoie { annonces, buffers }.
+ */
+async function genererImagesProgramme() {
+  const annonces = store.listAnnoncesAVenir();
+  const buffers = await rendreProgramme(await preparerSeances(annonces));
+  return { annonces, buffers };
+}
+
+/**
  * Régénère et publie le programme. `forcer` : supprime les anciennes images
  * et reposte tout (utilisé par /programme-cine). Renvoie
  * { seances, images }.
@@ -150,8 +160,7 @@ function publierProgramme(client, { forcer = false } = {}) {
     if (!channelId) throw new Error("CINE_CLUB_CHANNEL_PROGRAMME_ID n'est pas défini dans .env.");
     const channel = await client.channels.fetch(channelId);
 
-    const annonces = store.listAnnoncesAVenir();
-    const buffers = await rendreProgramme(await preparerSeances(annonces));
+    const { annonces, buffers } = await genererImagesProgramme();
 
     const etat = store.getProgramme();
     let anciensIds = etat.messageIds || [];
@@ -215,4 +224,4 @@ function demarrerSchedulerProgramme(client) {
   setInterval(() => rafraichirProgramme(client), INTERVALLE_MS);
 }
 
-module.exports = { publierProgramme, rafraichirProgramme, demarrerSchedulerProgramme };
+module.exports = { genererImagesProgramme, publierProgramme, rafraichirProgramme, demarrerSchedulerProgramme };

@@ -158,9 +158,20 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   (séance commencée, publication ratée). Mise à jour en **éditant**
   les messages existants (ajout/suppression des images en plus ou en moins).
   Si un message a été supprimé à la main, tout est republié.
+- Rappel hebdomadaire : chaque **dimanche à 18h**, le programme en image est
+  posté dans `CINE_CLUB_CHANNEL_DISCUTE_ID` (« la-discute ») avec mention du
+  rôle `CINE_CLUB_ROLE_SEANCES_CINE_ID` et la ligne « Le programme de la
+  semaine sur HHE. » sous les images (un message Components V2). Une seule
+  fois par dimanche (date persistée dans `data-store/cine-club-rappel-hebdo.json`) ;
+  si le bot était éteint à 18h, il part au redémarrage avant minuit. Rien
+  n'est posté s'il n'y a aucune séance à venir. Inactif sans la variable.
+- Rappels des séances : un seul rappel, **1h avant** la séance, dans le salon
+  de l'annonce (le rappel de la veille a été supprimé ; ceux encore
+  persistés sont ignorés).
 - Code : `src/modules/cine-club/programme/` (`render.js` dessin
   [`@napi-rs/canvas`](https://www.npmjs.com/package/@napi-rs/canvas), binaire
-  précompilé, aucune dépendance système ; `service.js` publication ; polices
+  précompilé, aucune dépendance système ; `service.js` publication ;
+  `rappel-hebdo.js` rappel du dimanche ; polices
   Anton, Creepster et Special Elite dans `fonts/`). État persistant :
   `data-store/cine-club-programme.json`.
 

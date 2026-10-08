@@ -8,6 +8,7 @@ const helpCine = require('./commands/help-cine');
 const programmeCine = require('./commands/programme-cine');
 const supprimerSeance = require('./commands/supprimer-seance');
 const { demarrerSchedulerProgramme } = require('./programme/service');
+const { demarrerSchedulerRappelHebdo } = require('./programme/rappel-hebdo');
 const {
   demarrerSchedulerRappels,
   handlePresenceButton,
@@ -33,7 +34,7 @@ module.exports = {
     { prefix: 'cine_vote_creneau', execute: handleVoteCreneauButton },
   ],
 
-  // Démarre la boucle qui vérifie chaque minute les rappels programmés par
+  // Démarre la boucle qui vérifie chaque minute les rappels (H-1) programmés par
   // les branches "Séances Séries", "Séance Libre" et "Valider séance" de
   // /cine ("Séance à l'arrache" n'en programme aucun, c'est une annonce
   // immédiate). Les rappels survivent à un restart car ils sont persistés en
@@ -42,8 +43,12 @@ module.exports = {
   //
   // Second tick par minute : tient à jour le programme en image
   // (programme/service.js) dès que la liste des séances à venir change.
+  //
+  // Troisième tick : rappel du programme chaque dimanche à 18h dans
+  // "la-discute" (programme/rappel-hebdo.js).
   init: (client) => {
     demarrerSchedulerRappels(client);
     demarrerSchedulerProgramme(client);
+    demarrerSchedulerRappelHebdo(client);
   },
 };

@@ -7,6 +7,7 @@ const NS_REMINDERS = 'cine-club-reminders';
 const NS_ANNONCES = 'cine-club-annonces';
 const NS_PRESENCES = 'cine-club-presences';
 const NS_PROGRAMME = 'cine-club-programme';
+const NS_RAPPEL_HEBDO = 'cine-club-rappel-hebdo';
 
 function cle(tmdbId, mediaType) {
   return `${mediaType}:${tmdbId}`;
@@ -244,6 +245,17 @@ function setProgramme(data) {
   jsonStore.write(NS_PROGRAMME, data);
 }
 
+// Date (AAAA-MM-JJ, heure de Paris) du dernier rappel hebdomadaire du
+// programme, pour ne l'envoyer qu'une fois par dimanche (même après restart).
+
+function getDernierRappelHebdo() {
+  return jsonStore.read(NS_RAPPEL_HEBDO, { date: null }).date;
+}
+
+function setDernierRappelHebdo(date) {
+  jsonStore.write(NS_RAPPEL_HEBDO, { date });
+}
+
 // --- Présences ("Je serai présent") ---------------------------------------
 //
 // Toggle par utilisateur, stocké par session (mediaType:tmdbId:timestamp de
@@ -325,6 +337,9 @@ module.exports = {
   // programme en image
   getProgramme,
   setProgramme,
+  // rappel hebdomadaire du programme
+  getDernierRappelHebdo,
+  setDernierRappelHebdo,
   // présences
   togglePresence,
   supprimerPresences,

@@ -727,30 +727,27 @@ function roleIdPourTypeSeance(typeSeanceId) {
 }
 
 /**
- * Programme les 2 rappels (J-1, H-1) pour une séance donnée.
- * Persistés en JSON pour survivre à un restart — voir init() du module
+ * Programme le rappel H-1 d'une séance (un seul rappel : le rappel de la
+ * veille a été retiré, le programme de la semaine étant rappelé chaque
+ * dimanche — voir programme/rappel-hebdo.js).
+ * Persisté en JSON pour survivre à un restart — voir init() du module
  * qui recharge et vérifie les rappels en attente au démarrage.
  */
 function programmerRappels({ sessionKey, channelId, roleId, titre, dateSeance }) {
-  const echeances = [
-    { offsetMs: 24 * 60 * 60 * 1000, label: 'demain' },
-    { offsetMs: 60 * 60 * 1000, label: "dans 1h" },
-  ];
-
-  const items = echeances.map(({ offsetMs, label }, index) => ({
-    id: `${dateSeance.getTime()}-${index}`,
-    triggerAt: dateSeance.getTime() - offsetMs,
+  // Suffixe d'id "-1" conservé (c'était celui du H-1) : "-0" reste réservé
+  // aux anciens rappels J-1 encore persistés, écartés par le scheduler.
+  const item = {
+    id: `${dateSeance.getTime()}-1`,
+    triggerAt: dateSeance.getTime() - 60 * 60 * 1000,
     sessionKey, // permet de retirer les rappels avec la séance (/supprimer-seance)
     channelId,
     roleId,
-    message: `🎬 Rappel : **${titre}** ${label} (${formatDateFr(dateSeance)}) !`,
+    message: `🎬 Rappel : **${titre}** dans 1h (${formatDateFr(dateSeance)}) !`,
     sent: false,
-  }));
+  };
 
-  // On ne programme pas les rappels déjà passés (ex: /host lancé la veille
-  // au soir pour une séance le lendemain matin — H-1 aurait un sens mais
-  // pas J-1).
-  const futurs = items.filter((i) => i.triggerAt > Date.now());
+  // Pas de rappel déjà passé (séance programmée moins d'1h à l'avance).
+  const futurs = item.triggerAt > Date.now() ? [item] : [];
   store.addReminders(futurs);
   return futurs;
 }
@@ -769,9 +766,10 @@ function demarrerSchedulerRappels(client) {
     for (const reminder of pending) {
       if (reminder.triggerAt > maintenant) continue;
 
-      // Rappels H-15 hérités (programmés avant leur suppression, encore
-      // persistés pour des séances futures) : on les écarte sans les envoyer.
-      if (reminder.message.includes('dans 15 minutes')) {
+      // Rappels H-15 et J-1 hérités (programmés avant leur suppression,
+      // encore persistés pour des séances futures) : on les écarte sans les
+      // envoyer.
+      if (reminder.message.includes('dans 15 minutes') || reminder.message.includes('** demain (')) {
         store.markReminderSent(reminder.id);
         continue;
       }
@@ -1000,7 +998,7 @@ async function handleValiderSeanceButton(interaction) {
   const messageAnnonce = await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
   store.majAnnonce(sessionKey, { messageId: messageAnnonce.id });
 
-  // --- Rappels J-1 / H-1 ---
+  // --- Rappel H-1 ---
   programmerRappels({
     sessionKey,
     channelId: targetChannelId,

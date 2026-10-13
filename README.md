@@ -52,6 +52,12 @@ src/
         scan-letterbox.js
         list-letterbox.js
         delete-letterbox.js
+    rss-feed/                 # publication automatique de flux RSS/Atom (alternative à MonitoRSS)
+      index.js                  # manifeste + scheduler (toutes les 10 min)
+      service.js                 # lecture du flux, recherche des images, carte V2
+      store.js                    # flux suivis + articles déjà publiés (rss-feed)
+      commands/
+        rss.js                     # /rss ajouter|liste|supprimer|tester
     forbidden-word/           # stub, prêt à implémenter
       index.js
 ```
@@ -194,3 +200,40 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   (pagination Précédent/Suivant au-delà de 25 profils, limite Discord).
   ⚠️ Un nouveau `/scan-letterbox` ré-ajoutera un profil supprimé si son
   message est toujours dans le salon.
+
+## Flux RSS
+
+Alternative maison à MonitoRSS : publie automatiquement les nouveaux articles
+de flux RSS 2.0 ou Atom dans des salons, sous forme de carte Components V2
+**avec l'image à la une en grand et les autres images de l'article en
+galerie**.
+
+- `/rss ajouter url salon [role]` (admin) : suit un flux et publie ses
+  nouveaux articles dans le salon, en mentionnant le rôle si fourni. Les
+  articles déjà présents dans le flux au moment de l'ajout sont ignorés (pas
+  d'inondation du salon avec l'historique). Un même flux peut être suivi dans
+  plusieurs salons.
+- `/rss liste` (admin) : flux suivis, salon et rôle mentionné.
+- `/rss supprimer` (admin) : menu déroulant pour arrêter de suivre un flux.
+- `/rss tester` (admin) : aperçu éphémère du dernier article tel qu'il serait
+  publié, sans rien poster dans le salon.
+- Vérification au démarrage puis toutes les 10 minutes. Les identifiants
+  d'articles publiés sont persistés (`data-store/rss-feed.json`, 300 derniers
+  par flux) : pas de doublon après un redémarrage.
+- **Carte publiée** (Components V2, un embed classique n'acceptant qu'une
+  seule grande image) : nom du flux, titre cliquable, image à la une en
+  pleine largeur, résumé, puis les autres images de l'article en mosaïque de
+  vignettes (9 au maximum, « +N autres images » au-delà), auteur · catégorie
+  · date, bouton « Lire l'article ». S'il n'y a qu'une seule autre image, elle
+  s'affiche en vignette à droite du résumé (une galerie d'une image serait
+  aussi grande que l'image à la une).
+- **Image à la une** : beaucoup de flux (WordPress par défaut, dont
+  horreurnews.com) ne la contiennent pas, d'où les embeds sans image de
+  MonitoRSS. Ordre de recherche : image déclarée dans le flux
+  (`media:content`, `media:thumbnail`, `enclosure`), puis balise `og:image`
+  de la page de l'article, puis première `<img>` du contenu. Les images de la
+  galerie sont les `<img>` du contenu, dédoublonnées (WordPress décline une
+  même image en plusieurs tailles `-1024x576`). Les formats que Discord
+  n'affiche pas (avif, svg...) sont ignorés.
+- Le pied de page WordPress (« L'article ... est apparu en premier sur ... »)
+  est retiré du résumé.

@@ -235,5 +235,17 @@ galerie**.
   galerie sont les `<img>` du contenu, dédoublonnées (WordPress décline une
   même image en plusieurs tailles `-1024x576`). Les formats que Discord
   n'affiche pas (avif, svg...) sont ignorés.
+- **Images en pièces jointes** : le bot télécharge lui-même les images et les
+  joint au message (`attachment://`) au lieu de donner leur URL. Sinon c'est
+  Discord qui va les chercher sur le site, et les protections anti-robots
+  (o2switch pour horreurnews.com) bloquent ses serveurs : les images ne
+  s'affichent pas. Limite de 5 Mo par image (contrôlée avant et pendant le
+  téléchargement, une image trop lourde est ignorée) et de 9 Mo par message
+  (limite Discord de 10 Mo sans boost). Les images restent en mémoire le temps
+  de l'envoi, rien n'est écrit sur le disque ; une image en échec est omise, et si c'est l'image à la une, la
+  première image de la galerie la remplace.
+- **En-têtes de navigateur** : le flux, les pages et les images sont demandés
+  avec un user-agent de navigateur classique ; un user-agent contenant « bot »
+  se fait refuser en 403 par ces mêmes protections.
 - Le pied de page WordPress (« L'article ... est apparu en premier sur ... »)
   est retiré du résumé.

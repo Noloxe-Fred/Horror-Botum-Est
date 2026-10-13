@@ -1,4 +1,5 @@
 const {
+  AttachmentBuilder,
   ContainerBuilder,
   MediaGalleryItemBuilder,
   TextDisplayBuilder,
@@ -23,8 +24,15 @@ const EN_TETES_HTTP = {
 };
 const COULEUR_CARTE = 0x8b0000;
 const LONGUEUR_RESUME = 350;
-// Une galerie Discord accepte 10 images au maximum ; 9 = grille 3x3.
+// Une galerie Discord accepte 10 images au maximum ; 9 = grille 3x3. Avec
+// l'image à la une, ça fait 10 pièces jointes : le maximum par message.
 const MAX_IMAGES_GALERIE = 9;
+// Limite d'envoi Discord : 10 Mo par message sur un serveur sans boost.
+const MAX_OCTETS_PIECES_JOINTES = 9 * 1024 * 1024;
+// Limite par image : une image plus lourde est ignorée sans être téléchargée
+// en entier. Une image d'article fait en général 50 à 500 Ko.
+const MAX_OCTETS_IMAGE = 5 * 1024 * 1024;
+const EXTENSIONS_IMAGES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp' };
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -99,6 +107,46 @@ async function telecharger(url) {
   }
   if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`);
   return res.text();
+}
+
+/**
+ * Télécharge une image. Retourne null si ce n'est pas un format que Discord
+ * affiche (le content-type fait foi, l'extension de l'URL peut mentir).
+ */
+async function telechargerImage(url) {
+  const res = await fetch(url, {
+    headers: { ...EN_TETES_HTTP, Accept: 'image/webp,image/png,image/jpeg,image/*;q=0.8' },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(TIMEOUT_HTTP_MS),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`);
+  const extension = EXTENSIONS_IMAGES[(res.headers.get('content-type') || '').split(';')[0].trim()];
+  if (!extension) {
+    await res.body?.cancel();
+    return null;
+  }
+
+  // Taille annoncée par le site : une image trop lourde n'est même pas
+  // téléchargée.
+  const tailleAnnoncee = Number(res.headers.get('content-length'));
+  if (tailleAnnoncee > MAX_OCTETS_IMAGE) {
+    await res.body?.cancel();
+    throw new Error(`image trop lourde (${Math.round(tailleAnnoncee / 1024 / 1024)} Mo)`);
+  }
+
+  // Taille réelle, contrôlée pendant la lecture (l'en-tête peut manquer ou
+  // mentir) : on coupe dès que la limite est dépassée.
+  const morceaux = [];
+  let octets = 0;
+  for await (const morceau of res.body) {
+    octets += morceau.length;
+    if (octets > MAX_OCTETS_IMAGE) {
+      await res.body.cancel().catch(() => {});
+      throw new Error(`image trop lourde (plus de ${Math.round(MAX_OCTETS_IMAGE / 1024 / 1024)} Mo)`);
+    }
+    morceaux.push(morceau);
+  }
+  return { buffer: Buffer.concat(morceaux), extension };
 }
 
 // --- Lecture du flux (RSS 2.0 et Atom) ---------------------------------------
@@ -241,6 +289,38 @@ async function trouverImages(article) {
   return { une, galerie };
 }
 
+/**
+ * Les images sont envoyées en pièces jointes plutôt que par leur URL : sinon
+ * c'est Discord qui va les chercher sur le site, et les protections
+ * anti-robots (o2switch pour horreurnews.com) bloquent ses serveurs, d'où
+ * des images qui ne s'affichent pas. Les images en échec ou hors budget
+ * (limite de taille d'un message) sont simplement omises.
+ *
+ * Retourne les pièces jointes et, pour chaque URL retenue, sa référence
+ * `attachment://...` à utiliser dans la carte.
+ */
+async function joindreImages(urls) {
+  const resultats = await Promise.allSettled(urls.map(telechargerImage));
+  const fichiers = [];
+  const references = new Map();
+  let octets = 0;
+
+  resultats.forEach((resultat, index) => {
+    if (resultat.status === 'rejected') {
+      console.warn(`[RSS] Image non téléchargée (${urls[index]}) :`, resultat.reason.message);
+      return;
+    }
+    const image = resultat.value;
+    if (!image || octets + image.buffer.length > MAX_OCTETS_PIECES_JOINTES) return;
+    octets += image.buffer.length;
+    const nom = `image-${index + 1}.${image.extension}`;
+    fichiers.push(new AttachmentBuilder(image.buffer, { name: nom }));
+    references.set(urls[index], `attachment://${nom}`);
+  });
+
+  return { fichiers, references };
+}
+
 // --- Publication -------------------------------------------------------------
 
 function resumeArticle(article) {
@@ -258,7 +338,15 @@ function resumeArticle(article) {
  * grille). Un embed classique ne permet qu'une seule grande image.
  */
 async function construireMessage(flux, article) {
-  const { une, galerie } = await trouverImages(article);
+  const images = await trouverImages(article);
+  const urlsGalerie = images.galerie.slice(0, MAX_IMAGES_GALERIE);
+  const { fichiers, references } = await joindreImages([images.une, ...urlsGalerie].filter(Boolean));
+  let une = images.une ? references.get(images.une) : null;
+  const galerie = urlsGalerie.map((url) => references.get(url)).filter(Boolean);
+  // Image à la une en échec : la première image de la galerie la remplace.
+  if (!une && galerie.length > 0) une = galerie.shift();
+  const reste = images.galerie.length - urlsGalerie.length;
+
   const container = new ContainerBuilder().setAccentColor(COULEUR_CARTE);
 
   // Les crochets casseraient le lien masqué [titre](url).
@@ -286,9 +374,7 @@ async function construireMessage(flux, article) {
   }
 
   if (galerie.length > 1 || (galerie.length === 1 && !resume)) {
-    const affichees = galerie.slice(0, MAX_IMAGES_GALERIE);
-    container.addMediaGalleryComponents((g) => g.addItems(affichees.map((url) => new MediaGalleryItemBuilder().setURL(url))));
-    const reste = galerie.length - affichees.length;
+    container.addMediaGalleryComponents((g) => g.addItems(galerie.map((url) => new MediaGalleryItemBuilder().setURL(url))));
     if (reste > 0) {
       container.addTextDisplayComponents((t) =>
         t.setContent(`-# +${reste} autre${reste > 1 ? 's' : ''} image${reste > 1 ? 's' : ''} dans l'article`)
@@ -308,18 +394,22 @@ async function construireMessage(flux, article) {
     );
   }
 
-  return container;
+  return { container, fichiers };
 }
 
 async function publierArticle(client, abonnement, flux, article) {
   const salon = await client.channels.fetch(abonnement.channelId);
   const components = [];
   if (abonnement.roleId) components.push(new TextDisplayBuilder().setContent(`<@&${abonnement.roleId}>`));
-  components.push(await construireMessage(flux, article));
+  // Les images ne sont jamais écrites sur le disque : elles restent en
+  // mémoire le temps de l'envoi, puis sont libérées avec ces variables.
+  const { container, fichiers } = await construireMessage(flux, article);
+  components.push(container);
 
   await salon.send({
     flags: MessageFlags.IsComponentsV2,
     components,
+    files: fichiers,
     allowedMentions: { roles: abonnement.roleId ? [abonnement.roleId] : [] },
   });
 }

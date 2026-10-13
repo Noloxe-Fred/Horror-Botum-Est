@@ -128,13 +128,15 @@ async function tester(interaction) {
 
   // Un message Components V2 ne peut pas avoir de `content` : l'en-tête de
   // l'aperçu est un TextDisplay, et l'ancien texte est vidé explicitement.
+  const { container, fichiers } = await construireMessage(flux, dernier);
   return interaction.editReply({
     content: null,
     flags: MessageFlags.IsComponentsV2,
     components: [
       new TextDisplayBuilder().setContent(`👀 Aperçu du dernier article, tel qu'il serait publié dans <#${abonnement.channelId}> :`),
-      await construireMessage(flux, dernier),
+      container,
     ],
+    files: fichiers,
   });
 }
 

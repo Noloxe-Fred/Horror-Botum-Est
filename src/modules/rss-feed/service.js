@@ -12,7 +12,15 @@ const store = require('./store');
 
 const INTERVALLE_VERIFICATION_MS = 10 * 60 * 1000;
 const TIMEOUT_HTTP_MS = 15 * 1000;
-const USER_AGENT = 'Mozilla/5.0 (compatible; HorrorBotumEst/2.0; +https://discord.com)';
+// En-têtes d'un navigateur classique : les pare-feu des hébergeurs (o2switch
+// pour horreurnews.com) répondent 403 aux user-agents contenant "bot" ou
+// trop incomplets, selon l'IP d'origine.
+const EN_TETES_HTTP = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+  Accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/html;q=0.8, */*;q=0.7',
+  'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+};
 const COULEUR_CARTE = 0x8b0000;
 const LONGUEUR_RESUME = 350;
 // Une galerie Discord accepte 10 images au maximum ; 9 = grille 3x3.
@@ -80,10 +88,15 @@ function tronquer(texte, max) {
 
 async function telecharger(url) {
   const res = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT },
+    headers: EN_TETES_HTTP,
     redirect: 'follow',
     signal: AbortSignal.timeout(TIMEOUT_HTTP_MS),
   });
+  if (res.status === 403 || res.status === 429) {
+    throw new Error(
+      `HTTP ${res.status} : le site refuse la connexion depuis l'hébergeur du bot (protection anti-robots du site)`
+    );
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`);
   return res.text();
 }

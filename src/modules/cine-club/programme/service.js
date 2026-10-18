@@ -1,7 +1,8 @@
 // Programme des Séances Ciné en image : liste toutes les séances annoncées
 // (cine-club-annonces) pas encore commencées, rendue en PNG (render.js) et
-// affichée dans CINE_CLUB_CHANNEL_PROGRAMME_ID — un message par image,
-// édités sur place à chaque changement plutôt que reposter.
+// affichée dans CINE_CLUB_CHANNEL_PROGRAMME_ID — une image d'en-tête puis une
+// image par séance, un message par image, édités sur place à chaque
+// changement plutôt que reposter.
 //
 // Mise à jour automatique : chaque branche de /cine (et /supprimer-seance)
 // appelle rafraichirProgramme() dès la séance enregistrée, et un tick par
@@ -13,7 +14,7 @@
 const { AttachmentBuilder } = require('discord.js');
 const config = require('../../../config');
 const store = require('../store');
-const { rendreProgramme } = require('./render');
+const { rendreProgramme, rendreProgrammeParSeance } = require('./render');
 
 const INTERVALLE_MS = 60 * 1000;
 const TIMEOUT_AFFICHE_MS = 10 * 1000;
@@ -143,9 +144,10 @@ async function mettreAJourMessages(channel, anciensIds, fichiers) {
  * Rend le programme actuel (séances à venir) en images PNG. Partagé avec le
  * rappel hebdomadaire (rappel-hebdo.js). Renvoie { annonces, buffers }.
  */
-async function genererImagesProgramme() {
+async function genererImagesProgramme({ parSeance = false } = {}) {
   const annonces = store.listAnnoncesAVenir();
-  const buffers = await rendreProgramme(await preparerSeances(annonces));
+  const rendre = parSeance ? rendreProgrammeParSeance : rendreProgramme;
+  const buffers = await rendre(await preparerSeances(annonces));
   return { annonces, buffers };
 }
 
@@ -160,7 +162,9 @@ function publierProgramme(client, { forcer = false } = {}) {
     if (!channelId) throw new Error("CINE_CLUB_CHANNEL_PROGRAMME_ID n'est pas défini dans .env.");
     const channel = await client.channels.fetch(channelId);
 
-    const { annonces, buffers } = await genererImagesProgramme();
+    // Salon programme : une image par séance (même échelle d'affichage
+    // quel que soit le nombre de séances par image).
+    const { annonces, buffers } = await genererImagesProgramme({ parSeance: true });
 
     const etat = store.getProgramme();
     let anciensIds = etat.messageIds || [];

@@ -150,10 +150,14 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   annoncées (toutes branches de `/cine`) pas encore commencées : affiche,
   type Film/Série, année, titre, synopsis tronqué, date et heure. Affichée
   dans `CINE_CLUB_CHANNEL_PROGRAMME_ID`.
-- 4 séances sur la première image (sous l'en-tête « Séances Ciné »), puis
-  5 par image supplémentaire, sans en-tête — un message par image, suivi
+- Une image d'en-tête « Séances Ciné », puis une image par séance (toutes
+  de même largeur et plus larges que hautes, donc affichées à la même
+  échelle par Discord, quel que soit le nombre de séances) — un message par
+  image, suivi
   d'une petite ligne « Cliquez sur une image pour l'agrandir » (Discord
   réduit les images dans le salon ; reposté si besoin pour rester en bas).
+  Le rappel hebdomadaire garde l'ancien découpage (4 séances sur la
+  première image, 5 par image suivante) dans une seule galerie.
 - `/programme-cine` (Admin ou rôle Modo `QUIZ_MOD_ROLE_ID`) supprime les anciennes images
   et republie le programme. À lancer la première fois (la mise à jour
   automatique reste inactive tant qu'elle n'a jamais été lancée) ou en cas

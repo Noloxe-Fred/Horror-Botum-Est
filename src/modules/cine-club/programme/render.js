@@ -428,4 +428,62 @@ async function rendreProgramme(seances) {
   );
 }
 
-module.exports = { rendreProgramme };
+// --- Une image par séance -------------------------------------------------
+//
+// Discord affiche une image seule dans une boîte bornée en largeur ET en
+// hauteur : une page haute (4 séances) est réduite par la hauteur, une page
+// basse (1 séance) par la largeur — la séance seule apparaît alors deux fois
+// plus grosse. En découpant en bandes de même largeur, toutes plus larges que
+// hautes, chaque image est réduite par la largeur, donc à la même échelle.
+
+const SEANCE_PAD = 30; // au-dessus et au-dessous d'une ligne séance
+
+function nouveauCanvas(hauteur) {
+  const canvas = createCanvas(LARGEUR, hauteur);
+  const ctx = canvas.getContext('2d');
+  dessinerFond(ctx, hauteur);
+  dessinerBandePerforee(ctx, 0);
+  dessinerBandePerforee(ctx, hauteur - BANDE_H);
+  return { canvas, ctx };
+}
+
+// En-tête seul ; s'il n'y a aucune séance, il porte aussi le message
+// "aucune séance" et le pied.
+function rendreEntete(vide) {
+  const hauteur = vide ? ENTETE_H + 12 + 120 + PIED_H + BANDE_H : ENTETE_H + BANDE_H;
+  const { canvas, ctx } = nouveauCanvas(hauteur);
+  dessinerEntete(ctx);
+  if (vide) {
+    ctx.font = '30px "Special Elite"';
+    ctx.fillStyle = COULEURS.creme;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Aucune séance au programme… pour l’instant.', LARGEUR / 2, ENTETE_H + 12 + 60);
+    dessinerPied(ctx, hauteur - BANDE_H - 40);
+  }
+  return canvas.encode('png');
+}
+
+// Une séance ; la dernière porte le pied ("Entrée libre...").
+async function rendreSeance(seance, index, derniere) {
+  const y = BANDE_H + SEANCE_PAD;
+  const hauteur = y + LIGNE_H + (derniere ? PIED_H : SEANCE_PAD) + BANDE_H;
+  const { canvas, ctx } = nouveauCanvas(hauteur);
+  dessinerLigne(ctx, seance, await chargerImage(seance.afficheBuffer), y, index, true);
+  if (derniere) dessinerPied(ctx, hauteur - BANDE_H - 40);
+  return canvas.encode('png');
+}
+
+/**
+ * Rend le programme en bandes : l'en-tête, puis une image par séance (même
+ * format de séance que rendreProgramme). Toutes s'affichent à la même
+ * échelle dans Discord.
+ */
+async function rendreProgrammeParSeance(seances) {
+  return Promise.all([
+    rendreEntete(seances.length === 0),
+    ...seances.map((seance, i) => rendreSeance(seance, i, i === seances.length - 1)),
+  ]);
+}
+
+module.exports = { rendreProgramme, rendreProgrammeParSeance };

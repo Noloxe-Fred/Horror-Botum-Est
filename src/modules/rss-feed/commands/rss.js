@@ -11,7 +11,7 @@ const {
 const withErrorHandling = require('../../../core/withErrorHandling');
 const { requireAdmin } = require('../../../core/permissions');
 const store = require('../store');
-const { lireFlux, construireMessage, INTERVALLE_VERIFICATION_MS } = require('../service');
+const { lireFlux, construireMessage, messageErreur, INTERVALLE_VERIFICATION_MS } = require('../service');
 
 const DELAI_CHOIX_MS = 60 * 1000;
 
@@ -71,7 +71,7 @@ async function ajouter(interaction) {
   try {
     flux = await lireFlux(url);
   } catch (err) {
-    return interaction.editReply(`❌ Impossible de lire ce flux : ${err.message}`);
+    return interaction.editReply(`❌ Impossible de lire ce flux : ${messageErreur(err)}`);
   }
 
   // Les articles déjà présents dans le flux sont marqués comme vus : seuls

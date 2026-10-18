@@ -94,11 +94,39 @@ function tronquer(texte, max) {
 
 // --- Récupération HTTP -------------------------------------------------------
 
+const DELAI_REESSAI_MS = 5 * 1000;
+
+/**
+ * Message d'erreur lisible : en cas d'erreur réseau, fetch lève un simple
+ * "fetch failed" et la vraie raison (DNS, délai de connexion, connexion
+ * coupée, certificat...) n'est que dans `err.cause`.
+ */
+function messageErreur(err) {
+  const cause = err?.cause;
+  if (!cause) return err?.message ?? String(err);
+  const detail = [cause.code, cause.message].filter(Boolean).join(' ');
+  return `${err.message} (${detail || cause})`;
+}
+
+/**
+ * fetch avec un nouvel essai après quelques secondes en cas d'erreur réseau
+ * (connexion coupée, DNS momentanément indisponible...) — pas en cas de
+ * réponse HTTP en erreur ni de délai dépassé.
+ */
+async function fetchAvecReessai(url, options) {
+  try {
+    return await fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUT_HTTP_MS) });
+  } catch (err) {
+    if (err.message !== 'fetch failed') throw err;
+    await new Promise((resolve) => setTimeout(resolve, DELAI_REESSAI_MS));
+    return fetch(url, { ...options, signal: AbortSignal.timeout(TIMEOUT_HTTP_MS) });
+  }
+}
+
 async function telecharger(url) {
-  const res = await fetch(url, {
+  const res = await fetchAvecReessai(url, {
     headers: EN_TETES_HTTP,
     redirect: 'follow',
-    signal: AbortSignal.timeout(TIMEOUT_HTTP_MS),
   });
   if (res.status === 403 || res.status === 429) {
     throw new Error(
@@ -114,10 +142,9 @@ async function telecharger(url) {
  * affiche (le content-type fait foi, l'extension de l'URL peut mentir).
  */
 async function telechargerImage(url) {
-  const res = await fetch(url, {
+  const res = await fetchAvecReessai(url, {
     headers: { ...EN_TETES_HTTP, Accept: 'image/webp,image/png,image/jpeg,image/*;q=0.8' },
     redirect: 'follow',
-    signal: AbortSignal.timeout(TIMEOUT_HTTP_MS),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`);
   const extension = EXTENSIONS_IMAGES[(res.headers.get('content-type') || '').split(';')[0].trim()];
@@ -240,7 +267,7 @@ async function imageOpenGraph(lien) {
       page.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i);
     return match ? decoderEntites(match[1]) : null;
   } catch (err) {
-    console.warn(`[RSS] og:image introuvable pour ${lien} :`, err.message);
+    console.warn(`[RSS] og:image introuvable pour ${lien} :`, messageErreur(err));
     return null;
   }
 }
@@ -307,7 +334,7 @@ async function joindreImages(urls) {
 
   resultats.forEach((resultat, index) => {
     if (resultat.status === 'rejected') {
-      console.warn(`[RSS] Image non téléchargée (${urls[index]}) :`, resultat.reason.message);
+      console.warn(`[RSS] Image non téléchargée (${urls[index]}) :`, messageErreur(resultat.reason));
       return;
     }
     const image = resultat.value;
@@ -437,7 +464,7 @@ async function verifierTout(client) {
       const publies = await verifierAbonnement(client, abonnement);
       if (publies > 0) console.log(`[RSS] ${publies} article(s) publié(s) depuis ${abonnement.url}`);
     } catch (err) {
-      console.error(`[RSS] Vérification impossible pour ${abonnement.url} :`, err.message);
+      console.error(`[RSS] Vérification impossible pour ${abonnement.url} :`, messageErreur(err));
     }
   }
 }
@@ -460,4 +487,4 @@ function demarrerScheduler(client) {
   setInterval(tick, INTERVALLE_VERIFICATION_MS);
 }
 
-module.exports = { lireFlux, construireMessage, demarrerScheduler, INTERVALLE_VERIFICATION_MS };
+module.exports = { lireFlux, construireMessage, messageErreur, demarrerScheduler, INTERVALLE_VERIFICATION_MS };

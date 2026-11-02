@@ -37,7 +37,7 @@ async function demanderTitreEtHeure(interaction, clicBouton, message) {
     .setCustomId('arrache_heure')
     .setLabel('Heure de diffusion (ex: 21h, 21h30)')
     .setStyle(TextInputStyle.Short)
-    .setValue('21h00')
+    .setValue('20h45')
     .setRequired(true)
     .setMaxLength(5);
   modal.addComponents(

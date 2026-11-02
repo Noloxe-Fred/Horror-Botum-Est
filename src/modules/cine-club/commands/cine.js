@@ -6,13 +6,11 @@ const { attendreClic } = require('../service');
 const { runSeriesWizard } = require('../wizards/series');
 const { runArracheWizard } = require('../wizards/arrache');
 const { runSeanceLibreWizard } = require('../wizards/seance-libre');
-const { runSemaineSuivanteWizard } = require('../wizards/semaine-suivante');
 
 const CHOIX = [
   { customId: 'cine_menu_series', label: '📺 Séances Séries', style: ButtonStyle.Primary },
   { customId: 'cine_menu_arrache', label: "🔥 Séance à l'arrache", style: ButtonStyle.Danger },
   { customId: 'cine_menu_libre', label: '🗓️ Séance Libre', style: ButtonStyle.Secondary },
-  { customId: 'cine_menu_semaine', label: '🎬 Séances Ciné semaine suivante', style: ButtonStyle.Primary },
 ];
 
 module.exports = {
@@ -54,7 +52,5 @@ module.exports = {
 
     await clic.deferUpdate();
 
-    if (clic.customId === 'cine_menu_libre') return runSeanceLibreWizard(interaction, message);
-    if (clic.customId === 'cine_menu_semaine') return runSemaineSuivanteWizard(interaction, message);
-  }, 'SEANCES-CINE-CINE'),
+    if (clic.customId === 'cine_menu_libre') return runSeanceLibreWizard(interaction, message);  }, 'SEANCES-CINE-CINE'),
 };

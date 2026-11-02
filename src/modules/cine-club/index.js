@@ -13,29 +13,23 @@ const {
   demarrerSchedulerRappels,
   handlePresenceButton,
   handleStartEventButton,
-  handleValiderSeanceButton,
-  handleVoteCreneauButton,
 } = require('./service');
 
 module.exports = {
   name: 'cine-club',
   commands: [search, add, list, deleteWatchlist, cine, historique, helpCine, programmeCine, supprimerSeance],
 
-  // Boutons persistants sur les annonces (carte séance) et les sondages
-  // /cine — survivent à un redémarrage du bot puisqu'ils sont dispatchés par
-  // préfixe de customId via le registre central (voir core/commandRegistry.js),
-  // pas par un collector scoped à la commande d'origine. cine_valider en
-  // particulier doit rester cliquable plusieurs jours (le temps du
-  // dépouillement des réactions).
+  // Boutons persistants sur les annonces (carte séance) /cine — survivent à
+  // un redémarrage du bot puisqu'ils sont dispatchés par préfixe de customId
+  // via le registre central (voir core/commandRegistry.js), pas par un
+  // collector scoped à la commande d'origine.
   buttons: [
     { prefix: 'cine_presence', execute: handlePresenceButton },
     { prefix: 'cine_start_event', execute: handleStartEventButton },
-    { prefix: 'cine_valider', execute: handleValiderSeanceButton },
-    { prefix: 'cine_vote_creneau', execute: handleVoteCreneauButton },
   ],
 
   // Démarre la boucle qui vérifie chaque minute les rappels (H-1) programmés par
-  // les branches "Séances Séries", "Séance Libre" et "Valider séance" de
+  // les branches "Séances Séries" et "Séance Libre" de
   // /cine ("Séance à l'arrache" n'en programme aucun, c'est une annonce
   // immédiate). Les rappels survivent à un restart car ils sont persistés en
   // JSON — au redémarrage, ceux déjà passés sont envoyés au premier tick

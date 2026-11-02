@@ -11,11 +11,12 @@ const config = require('../../../config');
 const tmdb = require('../tmdb');
 const store = require('../store');
 const { rafraichirProgramme } = require('../programme/service');
-const { prochainLundiA } = require('../dateUtils');
+const { formatJourFr, atHeure } = require('../dateUtils');
 const {
   attendreClic,
   demanderTitreTmdb,
   choisirResultatTmdb,
+  demanderJour,
   demanderSalonVocal,
   demanderHeure,
   demanderMessagePersonnalise,
@@ -109,7 +110,7 @@ async function choisirEpisodes(interaction, message, tmdbId) {
       )
     );
     return {
-      content: `**${saison.nom}** — coche les épisodes diffusés lundi, puis valide.`,
+      content: `**${saison.nom}** — coche les épisodes diffusés, puis valide.`,
       components: rows,
     };
   };
@@ -143,15 +144,16 @@ async function choisirEpisodes(interaction, message, tmdbId) {
 
 /**
  * Branche "Séances Séries" de /cine — recherche TMDB directe (pas de
- * sondage), choix de la saison et des épisodes diffusés, séance fixée au
- * lundi suivant, publiée dans le salon dédié (CINE_CLUB_CHANNEL_SERIE_ID)
- * où les gens s'inscrivent via "Je serai présent" comme pour une séance à
- * l'arrache. Relancée chaque semaine avec les nouveaux épisodes.
+ * sondage), choix de la saison et des épisodes diffusés, puis du jour (3
+ * prochaines semaines, comme la Séance Libre) et de l'heure, publiée dans le
+ * salon dédié (CINE_CLUB_CHANNEL_SERIE_ID) où les gens s'inscrivent via "Je
+ * serai présent" comme pour une séance à l'arrache. Relancée chaque semaine
+ * avec les nouveaux épisodes.
  * `clicBouton` est le clic du menu principal /cine qui déclenche l'ouverture
  * de la modale de recherche — il ne doit pas avoir été deferUpdate() avant.
  */
 async function runSeriesWizard(interaction, clicBouton, message) {
-  const titre = await demanderTitreTmdb(interaction, clicBouton, message, { label: 'Série à diffuser lundi prochain' });
+  const titre = await demanderTitreTmdb(interaction, clicBouton, message, { label: 'Série à diffuser' });
   if (!titre) return;
 
   await interaction.editReply({ content: 'Recherche en cours...', components: [] });
@@ -171,12 +173,15 @@ async function runSeriesWizard(interaction, clicBouton, message) {
     if (!episodes) return; // message d'erreur/timeout déjà posté par choisirEpisodes
   }
 
+  const jourChoisi = await demanderJour(interaction, message);
+  if (!jourChoisi) return; // message d'erreur/timeout déjà posté par demanderJour
+
   const heureChoisie = await demanderHeure(interaction, message, {
-    defaut: '21h00',
-    label: "l'heure de diffusion (lundi prochain)",
+    defaut: '20h45',
+    label: `l'heure de diffusion (${formatJourFr(jourChoisi)})`,
   });
   if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
-  const dateSeance = prochainLundiA(heureChoisie.heure, heureChoisie.minute);
+  const dateSeance = atHeure(jourChoisi, heureChoisie.heure, heureChoisie.minute);
 
   const salonVocalId = await demanderSalonVocal(interaction, message);
   if (!salonVocalId) return; // message d'erreur/timeout déjà posté

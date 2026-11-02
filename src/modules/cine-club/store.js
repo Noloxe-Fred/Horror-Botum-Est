@@ -2,7 +2,6 @@ const jsonStore = require('../../data/jsonStore');
 
 const NS_WATCHLIST = 'cine-club-watchlist';
 const NS_HISTORIQUE = 'cine-club-historique';
-const NS_POLLS_EN_ATTENTE = 'cine-club-polls-en-attente';
 const NS_REMINDERS = 'cine-club-reminders';
 const NS_ANNONCES = 'cine-club-annonces';
 const NS_PRESENCES = 'cine-club-presences';
@@ -90,57 +89,6 @@ function supprimerDeHistorique({ tmdbId, mediaType, dateVu }) {
 function listHistorique({ limit = 15 } = {}) {
   const { entries } = getHistorique();
   return [...entries].sort((a, b) => new Date(b.dateVu) - new Date(a.dateVu)).slice(0, limit);
-}
-
-// --- Sondages en attente de validation (pont vers le bouton "Valider
-// séance") --------------------------------------------------------------
-//
-// Contrairement à l'ancien /poll -> /host (un seul "dernier poll" en
-// mémoire), le bouton "Valider séance" est persistant et peut rester
-// cliquable plusieurs jours (le temps du dépouillement des réactions) —
-// plusieurs sondages pourraient donc coexister. Chacun est identifié par un
-// id embarqué dans le customId du bouton (`cine_valider:<id>`).
-
-function getPollsEnAttente() {
-  return jsonStore.read(NS_POLLS_EN_ATTENTE, {});
-}
-
-function creerPollEnAttente(poll) {
-  const id = String(Date.now());
-  const all = getPollsEnAttente();
-  all[id] = { votesCreneaux: {}, ...poll };
-  jsonStore.write(NS_POLLS_EN_ATTENTE, all);
-  return id;
-}
-
-function getPollEnAttente(id) {
-  return getPollsEnAttente()[id] || null;
-}
-
-function clearPollEnAttente(id) {
-  const all = getPollsEnAttente();
-  delete all[id];
-  jsonStore.write(NS_POLLS_EN_ATTENTE, all);
-}
-
-/**
- * Bascule le vote de créneau d'un utilisateur sur le sondage de date public
- * (customId `cine_vote_creneau:<pollId>:<index>`) — un seul vote actif par
- * utilisateur : cliquer sur le créneau déjà voté le retire, cliquer sur un
- * autre le déplace. Renvoie le poll à jour, ou `null` s'il est introuvable
- * (sondage expiré/déjà validé).
- */
-function voterCreneau(pollId, index, userId) {
-  const all = getPollsEnAttente();
-  const poll = all[pollId];
-  if (!poll) return null;
-
-  if (!poll.votesCreneaux) poll.votesCreneaux = {};
-  if (poll.votesCreneaux[userId] === index) delete poll.votesCreneaux[userId];
-  else poll.votesCreneaux[userId] = index;
-
-  jsonStore.write(NS_POLLS_EN_ATTENTE, all);
-  return poll;
 }
 
 // --- Rappels programmés (/host) -----------------------------------------
@@ -318,11 +266,6 @@ module.exports = {
   addToHistorique,
   supprimerDeHistorique,
   listHistorique,
-  // sondages en attente de validation
-  creerPollEnAttente,
-  getPollEnAttente,
-  clearPollEnAttente,
-  voterCreneau,
   // rappels
   addReminders,
   markReminderSent,

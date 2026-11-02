@@ -1,8 +1,6 @@
 // Tous les calculs de dates du module Séances Ciné, en JS natif (pas de
 // dépendance type date-fns), conformément à la doctrine du projet.
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function atHeure(date, heure, minute = 0) {
   const d = new Date(date);
   d.setHours(heure, minute, 0, 0);
@@ -27,63 +25,6 @@ function parseHeure(input) {
 }
 
 /**
- * "21h" ou "21h30" (pas de minutes si pile à l'heure) — utilisé pour
- * labelliser les créneaux proposés dans les sondages d'horaire.
- */
-function formatHeureCourte(heure, minute = 0) {
-  const h = String(heure).padStart(2, '0');
-  return minute ? `${h}h${String(minute).padStart(2, '0')}` : `${h}h`;
-}
-
-/**
- * Lundi (00:00) de la semaine EN COURS (celle qui contient `from`).
- */
-function currentWeekMonday(from = new Date()) {
-  const d = new Date(from);
-  const day = d.getDay(); // 0 = dimanche ... 6 = samedi
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diffToMonday);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-/**
- * Créneaux fixes pour un film : mardi / vendredi / samedi à l'heure choisie
- * par le streamer, de la semaine SUIVANT celle en cours (jamais la semaine
- * courante, même si on est lundi).
- */
-function creneauxFilmSemaineSuivante(heure, minute = 0, from = new Date()) {
-  const lundiSemaineSuivante = new Date(currentWeekMonday(from).getTime() + 7 * DAY_MS);
-
-  const mardi = atHeure(new Date(lundiSemaineSuivante.getTime() + 1 * DAY_MS), heure, minute);
-  const vendredi = atHeure(new Date(lundiSemaineSuivante.getTime() + 4 * DAY_MS), heure, minute);
-  const samedi = atHeure(new Date(lundiSemaineSuivante.getTime() + 5 * DAY_MS), heure, minute);
-
-  const libelleHeure = formatHeureCourte(heure, minute);
-  return [
-    { label: `Mardi ${libelleHeure}`, date: mardi },
-    { label: `Vendredi ${libelleHeure}`, date: vendredi },
-    { label: `Samedi ${libelleHeure}`, date: samedi },
-  ];
-}
-
-/**
- * Prochain lundi à l'heure choisie, STRICTEMENT après `from` (si `from` est
- * déjà lundi après cette heure, on saute à la semaine suivante).
- */
-function prochainLundiA(heure, minute = 0, from = new Date()) {
-  const d = new Date(from);
-  const day = d.getDay();
-  let diff = (1 - day + 7) % 7; // jours jusqu'au prochain lundi (0 si on est lundi)
-
-  let candidate = atHeure(new Date(d.getTime() + diff * DAY_MS), heure, minute);
-  if (candidate.getTime() <= from.getTime()) {
-    candidate = new Date(candidate.getTime() + 7 * DAY_MS);
-  }
-  return candidate;
-}
-
-/**
  * Heure choisie le jour même de `from` (utilisé par la séance "à l'arrache").
  * Si `from` est déjà après cette heure, on garde quand même le jour même
  * (séance à l'arrache = ce soir).
@@ -94,8 +35,9 @@ function ceSoirA(heure, minute = 0, from = new Date()) {
 
 /**
  * Les `nb` prochains jours calendaires à partir de demain (00:00), pour le
- * choix de date de la "Séance Libre". setDate() plutôt que + n * DAY_MS
- * pour rester juste lors des changements d'heure été/hiver.
+ * choix de date des séances (voir service.demanderJour). setDate() plutôt
+ * que + n jours en millisecondes pour rester juste lors des changements
+ * d'heure été/hiver.
  */
 function prochainsJours(nb, from = new Date()) {
   return Array.from({ length: nb }, (_, i) => {
@@ -132,9 +74,6 @@ function formatDateFr(date) {
 
 module.exports = {
   parseHeure,
-  formatHeureCourte,
-  creneauxFilmSemaineSuivante,
-  prochainLundiA,
   atHeure,
   ceSoirA,
   prochainsJours,

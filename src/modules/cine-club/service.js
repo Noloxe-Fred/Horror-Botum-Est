@@ -9,19 +9,16 @@ const {
   SeparatorSpacingSize,
   TextDisplayBuilder,
   GuildScheduledEventStatus,
-  GuildScheduledEventEntityType,
-  GuildScheduledEventPrivacyLevel,
   MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
 const config = require('../../config');
-const { requireAnyRole, requireStreamerRole } = require('../../core/permissions');
+const { requireStreamerRole } = require('../../core/permissions');
 const store = require('./store');
 const tmdb = require('./tmdb');
-const { rafraichirProgramme } = require('./programme/service');
-const { formatDateFr, parseHeure } = require('./dateUtils');
+const { formatDateFr, formatJourFr, parseHeure, prochainsJours } = require('./dateUtils');
 
 const COULEUR_FILM = 0xb8002e; // rouge horreur, cohérent avec le thème du serveur
 const COULEUR_SERIE = 0x1f8a70;
@@ -121,7 +118,7 @@ function buildFicheContainer(fiche) {
 }
 
 /**
- * Carte "séance" Components V2 — utilisée par /host et /arrache. Affiche
+ * Carte "séance" Components V2 — utilisée par toutes les branches de /cine. Affiche
  * jour/heure en grand (façon site de cinéma), le salon vocal, le compteur
  * de présents, puis la fiche du film/série, et enfin les boutons d'action
  * ("Je serai présent", lien TMDB, lien + démarrage de l'event Discord natif
@@ -276,7 +273,7 @@ async function choisirResultatTmdb(interaction, message, resultats) {
 /**
  * Demande le salon vocal de diffusion parmi les salons vocaux du serveur
  * (liste dynamique, pas de config .env figée). Auto-sélectionne s'il n'y en
- * a qu'un seul. Réutilisé par /host et /arrache.
+ * a qu'un seul. Réutilisé par les branches de /cine.
  *
  * Renvoie l'ID du salon choisi, ou `null` si aucun salon vocal n'existe ou
  * en cas d'annulation/timeout (message d'erreur déjà posté dans `message`).
@@ -320,13 +317,13 @@ async function demanderSalonVocal(interaction, message) {
 /**
  * Demande au streamer l'heure de diffusion via un bouton qui ouvre une
  * modale (un select menu ne permet pas la saisie libre nécessaire ici).
- * Réutilisé par /poll (créneaux film) et /host (séance série).
+ * Réutilisé par les branches "Séances Séries" et "Séance Libre" de /cine.
  *
  * Renvoie { heure, minute }, ou `null` en cas d'annulation/timeout/format
  * invalide (message d'erreur déjà posté dans `message`, l'appelant doit
  * juste s'arrêter).
  */
-async function demanderHeure(interaction, message, { defaut = '21h00', label = "l'heure de diffusion" } = {}) {
+async function demanderHeure(interaction, message, { defaut = '20h45', label = "l'heure de diffusion" } = {}) {
   const boutonId = 'heure_ouvrir_modal';
 
   await interaction.editReply({
@@ -390,7 +387,7 @@ async function demanderHeure(interaction, message, { defaut = '21h00', label = "
  * Demande au streamer un message personnalisé pour l'annonce finale (champ
  * `annonceTexte` de buildSeanceContainer), via bouton + modale pré-remplie
  * avec un texte par défaut — soumettre sans rien changer garde ce défaut.
- * Dernière étape commune aux 4 branches de /cine avant publication.
+ * Dernière étape commune aux 3 branches de /cine avant publication.
  *
  * Renvoie le texte choisi, ou `null` en cas d'annulation/timeout (message
  * d'erreur déjà posté dans `message`, l'appelant doit juste s'arrêter).
@@ -446,8 +443,6 @@ async function demanderMessagePersonnalise(interaction, message, { defaut }) {
   return texte || defaut;
 }
 
-const NUM_EMOJIS =['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-const MAX_CANDIDATS = 10; // limite pratique du sondage à réactions (10 emojis numérotés)
 const PAGE_SIZE = 25; // limite Discord d'un select menu
 
 function cleEntree(entree) {
@@ -466,29 +461,12 @@ async function attendreClic(message, userId, customIds, timeout = 120_000) {
   });
 }
 
-function construireRowPagination(page, totalPages) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('poll_page_prev')
-      .setLabel('◀️ Précédent')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page === 0),
-    new ButtonBuilder()
-      .setCustomId('poll_page_next')
-      .setLabel('Suivant ▶️')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page >= totalPages - 1),
-    new ButtonBuilder().setCustomId('poll_valider').setLabel('✅ Valider la sélection').setStyle(ButtonStyle.Success)
-  );
-}
-
 /**
- * Sélecteur paginé, multi ou single-select, dans la watchlist. Utilisé par
- * les branches "Séances Séries", "Séances Ciné semaine suivante" (modes
- * Manuel/Direct) et "Séance Libre" (choix watchlist). Renvoie le tableau des
- * entrées choisies.
+ * Sélecteur paginé (single-select) dans la watchlist. Utilisé par la branche
+ * "Séance Libre" (choix watchlist). Renvoie un tableau contenant l'entrée
+ * choisie, vide en cas d'annulation/timeout (message d'erreur déjà posté).
  */
-async function selectionnerDansWatchlist(interaction, message, entrees, { multi }) {
+async function selectionnerDansWatchlist(interaction, message, entrees) {
   if (entrees.length === 0) {
     await interaction.editReply({ content: '❌ La watchlist est vide pour ce type de contenu.', components: [] });
     return [];
@@ -496,48 +474,33 @@ async function selectionnerDansWatchlist(interaction, message, entrees, { multi 
 
   const totalPages = Math.ceil(entrees.length / PAGE_SIZE);
   let page = 0;
-  const selection = new Map(); // cle -> entree
 
   while (true) {
     const pageEntries = entrees.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
     const select = new StringSelectMenuBuilder()
-      .setCustomId('poll_select')
-      .setPlaceholder(multi ? 'Choisis un ou plusieurs titres' : 'Choisis un titre')
-      .setMinValues(1)
-      .setMaxValues(multi ? pageEntries.length : 1)
-      .addOptions(
-        pageEntries.map((e) => ({
-          label: e.titre.slice(0, 100),
-          value: cleEntree(e),
-          default: selection.has(cleEntree(e)),
-        }))
-      );
+      .setCustomId('watchlist_select')
+      .setPlaceholder('Choisis un titre')
+      .addOptions(pageEntries.map((e) => ({ label: e.titre.slice(0, 100), value: cleEntree(e) })));
 
     const rows = [new ActionRowBuilder().addComponents(select)];
-    if (multi) rows.push(construireRowPagination(page, totalPages));
-    else if (totalPages > 1) {
+    if (totalPages > 1) {
       rows.push(
         new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('poll_page_prev').setLabel('◀️ Précédent').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
-          new ButtonBuilder().setCustomId('poll_page_next').setLabel('Suivant ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
+          new ButtonBuilder().setCustomId('watchlist_page_prev').setLabel('◀️ Précédent').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+          new ButtonBuilder().setCustomId('watchlist_page_next').setLabel('Suivant ▶️').setStyle(ButtonStyle.Secondary).setDisabled(page >= totalPages - 1)
         )
       );
     }
 
-    await interaction.editReply({
-      content:
-        `Page ${page + 1}/${totalPages}` +
-        (multi ? ` — ${selection.size} titre(s) sélectionné(s) au total.` : ''),
-      components: rows,
-    });
-
-    const customIds = multi
-      ? ['poll_select', 'poll_page_prev', 'poll_page_next', 'poll_valider']
-      : ['poll_select', 'poll_page_prev', 'poll_page_next'];
+    await interaction.editReply({ content: `Page ${page + 1}/${totalPages}`, components: rows });
 
     let interactionComposant;
     try {
-      interactionComposant = await attendreClic(message, interaction.user.id, customIds);
+      interactionComposant = await attendreClic(message, interaction.user.id, [
+        'watchlist_select',
+        'watchlist_page_prev',
+        'watchlist_page_next',
+      ]);
     } catch {
       await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
       return [];
@@ -545,114 +508,51 @@ async function selectionnerDansWatchlist(interaction, message, entrees, { multi 
 
     await interactionComposant.deferUpdate();
 
-    if (interactionComposant.customId === 'poll_page_prev') {
+    if (interactionComposant.customId === 'watchlist_page_prev') {
       page = Math.max(0, page - 1);
       continue;
     }
-    if (interactionComposant.customId === 'poll_page_next') {
+    if (interactionComposant.customId === 'watchlist_page_next') {
       page = Math.min(totalPages - 1, page + 1);
       continue;
     }
-    if (interactionComposant.customId === 'poll_select') {
-      const valeurs = interactionComposant.values;
-      if (!multi) {
-        const choisi = entrees.find((e) => cleEntree(e) === valeurs[0]);
-        return choisi ? [choisi] : [];
-      }
-      // multi : on fusionne avec la sélection déjà faite sur d'autres pages
-      for (const e of pageEntries) {
-        if (valeurs.includes(cleEntree(e))) selection.set(cleEntree(e), e);
-        else selection.delete(cleEntree(e));
-      }
-      continue;
-    }
-    if (interactionComposant.customId === 'poll_valider') {
-      return [...selection.values()].slice(0, MAX_CANDIDATS);
-    }
+    const choisi = entrees.find((e) => cleEntree(e) === interactionComposant.values[0]);
+    return choisi ? [choisi] : [];
   }
 }
 
-/**
- * Poste la fiche Components V2 (poster, synopsis, casting...) de chaque
- * candidat, une par une (limite de 40 composants par message — impossible de
- * regrouper plusieurs fiches complètes dans un seul message). En mode
- * Aléatoire/Manuel (`avecVote`), chaque fiche reçoit une réaction numérotée
- * pour servir de bulletin de vote ; en mode Direct (un seul candidat déjà
- * choisi), la fiche est juste affichée sans réaction.
- */
-async function posterFichesCandidats(channel, candidats, { avecVote }) {
-  const emojis = NUM_EMOJIS.slice(0, candidats.length);
-  const fiches = await Promise.all(candidats.map((c) => tmdb.getDetails(c.tmdbId, c.mediaType)));
-
-  for (let i = 0; i < fiches.length; i++) {
-    const entete = avecVote ? `${emojis[i]} **Candidat au sondage film**` : '🎬 **Film sélectionné**';
-    const container = prependTextDisplay(buildFicheContainer(fiches[i]), entete);
-    const message = await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
-    if (avecVote) await message.react(emojis[i]);
-  }
-}
+const NB_JOURS_PROPOSES = 21; // 3 semaines (un select Discord accepte 25 options max)
 
 /**
- * Compte les votes de créneau d'un sondage en attente, un vote par
- * utilisateur (voir store.voterCreneau) — renvoie un tableau de compteurs
- * indexé comme `poll.creneaux`.
+ * Demande le jour de la séance parmi les NB_JOURS_PROPOSES prochains jours
+ * (à partir de demain). Utilisé par les branches "Séance Libre" et
+ * "Séances Séries".
+ *
+ * Renvoie la date choisie (00:00), ou `null` en cas d'annulation/timeout
+ * (message d'erreur déjà posté dans `message`, l'appelant doit juste
+ * s'arrêter).
  */
-function compterVotesCreneaux(poll) {
-  const counts = new Array(poll.creneaux.length).fill(0);
-  for (const index of Object.values(poll.votesCreneaux || {})) {
-    if (counts[index] !== undefined) counts[index] += 1;
-  }
-  return counts;
-}
+async function demanderJour(interaction, message) {
+  const jours = prochainsJours(NB_JOURS_PROPOSES);
+  const select = new StringSelectMenuBuilder()
+    .setCustomId('seance_jour')
+    .setPlaceholder('Jour de la séance')
+    .addOptions(jours.map((j, i) => ({ label: formatJourFr(j), value: String(i) })));
 
-function libelleCreneauVotes(creneau, count) {
-  return `${creneau.label} — ${count} vote${count > 1 ? 's' : ''}`;
-}
-
-function construireRowVoteCreneaux(pollId, creneaux, counts) {
-  return new ActionRowBuilder().addComponents(
-    creneaux.map((c, i) =>
-      new ButtonBuilder()
-        .setCustomId(`cine_vote_creneau:${pollId}:${i}`)
-        .setLabel(libelleCreneauVotes(c, counts[i]))
-        .setStyle(ButtonStyle.Primary)
-    )
-  );
-}
-
-/**
- * Sondage d'horaire à boutons (remplace l'ancien sondage à réactions) — le
- * comptage des votes est automatique (voir handleVoteCreneauButton), le
- * streamer n'a plus besoin de dépouiller à l'œil au moment de valider.
- */
-async function posterSondageDate(channel, poll, pollId) {
-  const counts = compterVotesCreneaux(poll);
-  const lignes = poll.creneaux.map((c) => `**${c.label}** (${formatDateFr(new Date(c.date))})`).join('\n');
-  return channel.send({
-    content: `🕒 **Sondage d'horaire** — clique sur le créneau qui te convient !\n\n${lignes}`,
-    components: [construireRowVoteCreneaux(pollId, poll.creneaux, counts)],
+  await interaction.editReply({
+    content: 'Quel jour ?',
+    components: [new ActionRowBuilder().addComponents(select)],
   });
-}
 
-/**
- * Handler du bouton persistant "vote créneau" (customId
- * `cine_vote_creneau:<pollId>:<index>`), posté sous le sondage de date de la
- * branche "Séances Ciné semaine suivante". Un clic sur le créneau déjà voté
- * retire le vote, un clic sur un autre créneau déplace le vote (un seul vote
- * actif par utilisateur, comme pour la présence à une séance).
- */
-async function handleVoteCreneauButton(interaction) {
-  const [, pollId, indexStr] = interaction.customId.split(':');
-  const poll = store.voterCreneau(pollId, Number(indexStr), interaction.user.id);
-  if (!poll) {
-    return interaction.reply({
-      content: '❌ Ce sondage est introuvable ou a déjà été validé.',
-      ephemeral: true,
-    });
+  let clic;
+  try {
+    clic = await attendreClic(message, interaction.user.id, ['seance_jour']);
+  } catch {
+    await interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
+    return null;
   }
-
-  const counts = compterVotesCreneaux(poll);
-  await interaction.update({ components: [construireRowVoteCreneaux(pollId, poll.creneaux, counts)] });
+  await clic.deferUpdate();
+  return jours[Number(clic.values[0])];
 }
 
 /**
@@ -823,220 +723,6 @@ function prependTextDisplay(container, texte) {
 }
 
 /**
- * Handler du bouton persistant "Valider séance" (customId
- * `cine_valider:<pollId>`), posté sous le sondage de la branche "Séances
- * Ciné semaine suivante" de `/cine` (seule branche qui passe encore par un
- * sondage — les 3 autres publient directement). Reprend le rôle de l'ancien
- * /host : dépouille le titre gagnant, fixe le créneau, le rôle à mentionner,
- * le salon vocal et le message de l'annonce, puis publie l'annonce finale +
- * crée l'événement Discord natif. Réservé à l'admin ou au rôle streamer.
- */
-async function handleValiderSeanceButton(interaction) {
-  if (!(await requireAnyRole(interaction, [config.cineClub.streamerRoleId], { label: 'le rôle streamer Séances Ciné' })))
-    return;
-
-  const pollId = interaction.customId.split(':').slice(1).join(':');
-  const poll = store.getPollEnAttente(pollId);
-  if (!poll) {
-    return interaction.reply({
-      content: '❌ Ce sondage est introuvable ou a déjà été validé.',
-      ephemeral: true,
-    });
-  }
-
-  await interaction.deferReply({ ephemeral: true });
-  const { titresCandidats } = poll;
-
-  // --- Étape 1 : choix du titre gagnant ---
-  let gagnant;
-  if (titresCandidats.length === 1) {
-    gagnant = titresCandidats[0];
-  } else {
-    const select = new StringSelectMenuBuilder()
-      .setCustomId('host_titre')
-      .setPlaceholder('Choisis le titre gagnant')
-      .addOptions(
-        titresCandidats.map((c) => ({
-          label: c.titre.slice(0, 100),
-          value: `${c.mediaType}:${c.tmdbId}`,
-        }))
-      );
-
-    const message = await interaction.editReply({
-      content: 'Quel titre a gagné le vote ?',
-      components: [new ActionRowBuilder().addComponents(select)],
-    });
-
-    let clic;
-    try {
-      clic = await attendreClic(message, interaction.user.id, ['host_titre']);
-    } catch {
-      return interaction.editReply({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
-    }
-    await clic.deferUpdate();
-    const [mediaType, tmdbIdStr] = clic.values[0].split(':');
-    gagnant = titresCandidats.find((c) => c.mediaType === mediaType && String(c.tmdbId) === tmdbIdStr);
-  }
-
-  const message = await interaction.editReply({ content: 'Traitement en cours...', components: [] });
-
-  // --- Étape 2 : créneau de la séance ---
-  if (!poll.creneaux || poll.creneaux.length === 0) {
-    return interaction.editReply('❌ Aucun créneau d\'horaire enregistré pour ce sondage.');
-  }
-  const counts = compterVotesCreneaux(poll);
-  const row = new ActionRowBuilder().addComponents(
-    poll.creneaux.map((c, i) =>
-      new ButtonBuilder()
-        .setCustomId(`host_creneau_${i}`)
-        .setLabel(libelleCreneauVotes(c, counts[i]))
-        .setStyle(ButtonStyle.Primary)
-    )
-  );
-  await interaction.editReply({ content: 'Quel créneau a gagné le sondage d\'horaire ?', components: [row] });
-
-  let clicCreneau;
-  try {
-    clicCreneau = await attendreClic(
-      message,
-      interaction.user.id,
-      poll.creneaux.map((_, i) => `host_creneau_${i}`)
-    );
-  } catch {
-    return interaction.editReply({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
-  }
-  await clicCreneau.deferUpdate();
-  const index = Number(clicCreneau.customId.split('_').pop());
-  const dateSeance = new Date(poll.creneaux[index].date);
-
-  // --- Étape 3 : rôle à mentionner ---
-  const select = new StringSelectMenuBuilder()
-    .setCustomId('host_role')
-    .setPlaceholder('Type de séance')
-    .addOptions(TYPES_SEANCE_FILM.map((t) => ({ label: t.label, value: t.id })));
-
-  await interaction.editReply({
-    content: 'Quel type de séance ?',
-    components: [new ActionRowBuilder().addComponents(select)],
-  });
-
-  let clicRole;
-  try {
-    clicRole = await attendreClic(message, interaction.user.id, ['host_role']);
-  } catch {
-    return interaction.editReply({ content: '⌛ Temps écoulé, validation annulée.', components: [] });
-  }
-  await clicRole.deferUpdate();
-  const roleId = roleIdPourTypeSeance(clicRole.values[0]);
-
-  // --- Étape 4 : salon vocal de diffusion ---
-  const salonVocalId = await demanderSalonVocal(interaction, message);
-  if (!salonVocalId) return; // message d'erreur/timeout déjà posté
-
-  const targetChannelId = config.cineClub.channelId;
-  const salonAnnonce = await interaction.guild.channels.fetch(targetChannelId);
-  if (!salonAnnonce) {
-    return interaction.editReply({ content: `❌ Salon d'annonce introuvable (ID ${targetChannelId}).`, components: [] });
-  }
-
-  // --- Étape 5 : message personnalisé de l'annonce ---
-  const annonceTexte = await demanderMessagePersonnalise(interaction, message, {
-    defaut: 'Nouvelle Séance Ciné programmée !',
-  });
-  if (!annonceTexte) return; // message d'erreur/timeout déjà posté par demanderMessagePersonnalise
-
-  // --- Fiche TMDB complète (synopsis, réalisation, casting, pays à jour) ---
-  const fiche = await tmdb.getDetails(gagnant.tmdbId, gagnant.mediaType);
-
-  // --- Événement Discord natif (best-effort, ne bloque pas la validation si ça échoue) ---
-  let eventId = null;
-  try {
-    const evenement = await interaction.guild.scheduledEvents.create({
-      name: `Séances Ciné : ${fiche.titre}`,
-      scheduledStartTime: dateSeance,
-      scheduledEndTime: new Date(dateSeance.getTime() + 150 * 60 * 1000),
-      privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-      entityType: GuildScheduledEventEntityType.Voice,
-      channel: salonVocalId,
-      description: fiche.overview.slice(0, 950),
-    });
-    eventId = evenement.id;
-  } catch (err) {
-    console.error("[SEANCES-CINE] Impossible de créer l'événement Discord natif :", err);
-  }
-
-  const mention = roleId ? `<@&${roleId}> ` : '';
-  const sessionKey = `${fiche.mediaType}:${fiche.tmdbId}:${dateSeance.getTime()}`;
-
-  store.setAnnonce(sessionKey, {
-    mediaType: fiche.mediaType,
-    tmdbId: fiche.tmdbId,
-    dateSeance: dateSeance.toISOString(),
-    salonVocalId,
-    channelId: targetChannelId,
-    fiche,
-    mention,
-    annonceTexte,
-    roleId,
-    guildId: interaction.guild.id,
-    eventId,
-  });
-
-  const container = buildSeanceContainer({
-    sessionKey,
-    mediaType: fiche.mediaType,
-    dateSeance,
-    salonVocalId,
-    fiche,
-    presentsCount: 0,
-    mention,
-    annonceTexte,
-    guildId: interaction.guild.id,
-    eventId,
-  });
-
-  const messageAnnonce = await salonAnnonce.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
-  store.majAnnonce(sessionKey, { messageId: messageAnnonce.id });
-
-  // --- Rappel H-1 ---
-  programmerRappels({
-    sessionKey,
-    channelId: targetChannelId,
-    roleId,
-    titre: fiche.titre,
-    dateSeance,
-  });
-
-  // --- Historique + série en cours ---
-  store.addToHistorique({
-    tmdbId: fiche.tmdbId,
-    mediaType: fiche.mediaType,
-    titre: fiche.titre,
-    dateVu: dateSeance.toISOString(),
-    posterUrl: fiche.posterUrl,
-    source: 'cine-club',
-  });
-
-  // Programme en image à jour tout de suite (sans attendre le tick).
-  rafraichirProgramme(interaction.client);
-
-  store.clearPollEnAttente(pollId);
-
-  // Le sondage a rempli son rôle : on retire le bouton "Valider séance" du
-  // message d'origine pour éviter une double validation.
-  try {
-    await interaction.message.edit({
-      content: `${interaction.message.content}\n\n✅ **Séance validée par ${interaction.user} !**`,
-      components: [],
-    });
-  } catch (err) {
-    console.error('[SEANCES-CINE] Impossible de mettre à jour le message de sondage :', err);
-  }
-
-  await interaction.editReply({ content: `✅ Séance programmée et annoncée dans <#${targetChannelId}> !`, components: [] });
-}
-
-/**
  * Handler du bouton "Je serai présent" (customId `cine_presence:<sessionKey>`).
  * Toggle la présence de l'utilisateur, reconstruit la carte séance avec le
  * compteur à jour, et édite le message en place.
@@ -1121,8 +807,7 @@ module.exports = {
   prependTextDisplay,
   attendreClic,
   selectionnerDansWatchlist,
-  posterFichesCandidats,
-  posterSondageDate,
+  demanderJour,
   demanderSalonVocal,
   demanderHeure,
   demanderTitreTmdb,
@@ -1136,6 +821,4 @@ module.exports = {
   demarrerSchedulerRappels,
   handlePresenceButton,
   handleStartEventButton,
-  handleValiderSeanceButton,
-  handleVoteCreneauButton,
 };

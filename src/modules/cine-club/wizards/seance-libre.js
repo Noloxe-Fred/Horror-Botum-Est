@@ -11,12 +11,13 @@ const config = require('../../../config');
 const tmdb = require('../tmdb');
 const store = require('../store');
 const { rafraichirProgramme } = require('../programme/service');
-const { prochainsJours, formatJourFr, atHeure } = require('../dateUtils');
+const { formatJourFr, atHeure } = require('../dateUtils');
 const {
   attendreClic,
   selectionnerDansWatchlist,
   demanderTitreTmdb,
   choisirResultatTmdb,
+  demanderJour,
   demanderSalonVocal,
   demanderHeure,
   demanderMessagePersonnalise,
@@ -26,11 +27,9 @@ const {
   programmerRappels,
 } = require('../service');
 
-const NB_JOURS_PROPOSES = 21; // 3 semaines (un select Discord accepte 25 options max)
-
 /**
  * Branche "Séance Libre" de /cine — programme un film à une date libre
- * parmi les NB_JOURS_PROPOSES prochains jours (à partir de demain), à une heure
+ * parmi les 3 prochaines semaines (à partir de demain, voir demanderJour), à une heure
  * libre. Film choisi soit dans la watchlist, soit via une recherche TMDB
  * libre. Rôle à mentionner (Séances Cinés / Ciné Classiques / Courts
  * Métrages) choisi par le streamer, comme /host.
@@ -58,7 +57,7 @@ async function runSeanceLibreWizard(interaction, message) {
   if (clicSource.customId === 'cinelibre_source_watchlist') {
     await clicSource.deferUpdate();
     const watchlist = store.listWatchlist({ mediaType: 'movie' });
-    const choix = await selectionnerDansWatchlist(interaction, message, watchlist, { multi: false });
+    const choix = await selectionnerDansWatchlist(interaction, message, watchlist);
     if (choix.length === 0) return; // message d'erreur déjà posté par le sélecteur
     elu = choix[0];
   } else {
@@ -77,28 +76,11 @@ async function runSeanceLibreWizard(interaction, message) {
     elu = choisi;
   }
 
-  const jours = prochainsJours(NB_JOURS_PROPOSES);
-  const selectJour = new StringSelectMenuBuilder()
-    .setCustomId('cinelibre_jour')
-    .setPlaceholder('Jour de la séance')
-    .addOptions(jours.map((j, i) => ({ label: formatJourFr(j), value: String(i) })));
-
-  await interaction.editReply({
-    content: 'Quel jour ?',
-    components: [new ActionRowBuilder().addComponents(selectJour)],
-  });
-
-  let clicJour;
-  try {
-    clicJour = await attendreClic(message, interaction.user.id, ['cinelibre_jour']);
-  } catch {
-    return interaction.editReply({ content: '⌛ Temps écoulé, commande annulée.', components: [] });
-  }
-  await clicJour.deferUpdate();
-  const jourChoisi = jours[Number(clicJour.values[0])];
+  const jourChoisi = await demanderJour(interaction, message);
+  if (!jourChoisi) return; // message d'erreur/timeout déjà posté par demanderJour
 
   const heureChoisie = await demanderHeure(interaction, message, {
-    defaut: '21h00',
+    defaut: '20h45',
     label: `l'heure de diffusion (${formatJourFr(jourChoisi)})`,
   });
   if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure

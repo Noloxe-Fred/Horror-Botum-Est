@@ -46,6 +46,11 @@ const OPTIONAL = [
   'CINE_CLUB_ROLE_COURTS_METRAGES_ID',
   'CINE_CLUB_ROLE_SEANCES_SERIE_ID',
   'CINE_CLUB_ROLE_ARRACHE_ID',
+  // --- Stream jeux vidéo ---
+  'TWITCH_CLIENT_ID',
+  'TWITCH_CLIENT_SECRET',
+  'STREAM_CHANNEL_ID',
+  'STREAM_ROLE_ID',
   // --- Letterboxd ---
   'SOCIAL_NETWORKS_CHANNEL_ID',
 ];
@@ -116,5 +121,18 @@ module.exports = {
       seancesSerie: process.env.CINE_CLUB_ROLE_SEANCES_SERIE_ID || null,
       arrache: process.env.CINE_CLUB_ROLE_ARRACHE_ID || null,
     },
+  },
+
+  // --- Stream jeux vidéo ---
+  // Optionnel : identifiants d'une application Twitch, IGDB s'authentifie via
+  // Twitch. Sans eux, /stream ne cherche que sur Steam.
+  igdb: {
+    clientId: process.env.TWITCH_CLIENT_ID || null,
+    clientSecret: process.env.TWITCH_CLIENT_SECRET || null,
+  },
+
+  stream: {
+    channelId: process.env.STREAM_CHANNEL_ID || null,
+    roleId: process.env.STREAM_ROLE_ID || null,
   },
 };

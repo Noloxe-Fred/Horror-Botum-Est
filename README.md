@@ -58,6 +58,16 @@ src/
       store.js                    # flux suivis + articles déjà publiés (rss-feed)
       commands/
         rss.js                     # /rss ajouter|liste|supprimer|tester
+    stream/                   # annonces de streams jeux vidéo sur Twitch
+      index.js                  # manifeste + boutons persistants
+      jeux.js                    # recherche combinée : Steam puis IGDB
+      steam.js                   # fiches en français (API boutique Steam, sans clé)
+      igdb.js                    # optionnel : jeux absents de Steam (jeton Twitch)
+      service.js                 # carte V2, boutons, rappel H-1
+      store.js                    # annonces (stream-annonces)
+      commands/
+        stream.js
+        supprimer-stream.js
     forbidden-word/           # stub, prêt à implémenter
       index.js
 ```
@@ -147,8 +157,8 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
 ## Séances Ciné — programme en image
 
 - Une image façon programme de cinéma grindhouse liste toutes les séances
-  annoncées (toutes branches de `/cine`) pas encore commencées : affiche,
-  type Film/Série, année, titre, synopsis tronqué, date et heure. Affichée
+  annoncées (toutes branches de `/cine`) et les streams de `/stream` pas encore
+  commencés : affiche, type Film/Série/Jeu vidéo, année, titre, synopsis tronqué, date et heure. Affichée
   dans `CINE_CLUB_CHANNEL_PROGRAMME_ID`.
 - Une image d'en-tête « Séances Ciné », puis une image par séance (toutes
   de même largeur et plus larges que hautes, donc affichées à la même
@@ -169,8 +179,9 @@ pas `le mot interdit`) pour rester compatible partout (shell, CLI, etc.).
   les messages existants (ajout/suppression des images en plus ou en moins).
   Si un message a été supprimé à la main, tout est republié.
 - Rappel hebdomadaire : chaque **dimanche à 18h**, le programme en image est
-  posté dans `CINE_CLUB_CHANNEL_DISCUTE_ID` (« la-discute ») avec mention du
-  rôle `CINE_CLUB_ROLE_SEANCES_CINE_ID` et la ligne « Le programme de la
+  posté dans `CINE_CLUB_CHANNEL_DISCUTE_ID` (« la-discute ») avec mention de
+  `CINE_CLUB_ROLE_SEANCES_CINE_ID` s'il y a une séance à venir et de
+  `STREAM_ROLE_ID` s'il y a un stream à venir, et la ligne « Le programme de la
   semaine sur HHE. » sous les images (un message Components V2). Une seule
   fois par dimanche (date persistée dans `data-store/cine-club-rappel-hebdo.json`) ;
   si le bot était éteint à 18h, il part au redémarrage avant minuit. Rien
@@ -253,3 +264,27 @@ galerie**.
   se fait refuser en 403 par ces mêmes protections.
 - Le pied de page WordPress (« L'article ... est apparu en premier sur ... »)
   est retiré du résumé.
+
+## Stream jeux vidéo
+
+Annonce un stream sur [la chaîne Twitch](https://www.twitch.tv/horror_humanum_est),
+sur le modèle de la branche « Séance Libre » de `/cine`.
+
+- `/stream jeu` (rôle streamer, depuis n'importe quel salon) : recherche du
+  jeu, choix du jeu, du jour (3 prochaines semaines), de l'heure (20h30 par
+  défaut) et du message. Publie une carte Components V2 dans `STREAM_CHANNEL_ID`
+  en mentionnant `STREAM_ROLE_ID`, avec lien Twitch, bouton « Je serai présent »,
+  fiche du jeu, lien et démarrage de l'event.
+- **Event Discord externe** de 3 h dont le lieu est la chaîne Twitch (pas de salon vocal).
+- **Rappel H-1** avec mention du rôle, envoyé par le scheduler de `cine-club`.
+- `/supprimer-stream` (rôle streamer) : retire annonce, event, rappel, présences
+  et place au programme.
+- **Programme en image** : les streams y figurent aux côtés des séances, triés
+  par date, avec l'étiquette « Jeu vidéo », y compris dans le rappel du dimanche.
+  Ils n'apparaissent ni dans `/supprimer-seance` ni dans l'historique.
+- **Steam** (source principale) : API de la boutique, sans clé, non documentée
+  officiellement. Le résumé est en français si l'éditeur l'a traduit, sinon en
+  anglais. Les jeux absents de Steam (exclusivités console...) n'y figurent pas.
+- **IGDB** (optionnel) : complète les résultats avec ces jeux, résumé en anglais.
+  Actif si `TWITCH_CLIENT_ID` et `TWITCH_CLIENT_SECRET` sont renseignés (application
+  Twitch).

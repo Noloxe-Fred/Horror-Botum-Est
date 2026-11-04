@@ -35,7 +35,7 @@ boutons vers 3 branches : Séances Séries, Séance à l'arrache, Séance Libre 
 logique de chaque branche dans
 `src/modules/cine-club/wizards/`, intégration TMDB), `letterboxd`, `rss-feed`
 (`/rss ajouter|liste|supprimer|tester`, flux RSS/Atom en carte Components V2 : image à la une
-via `og:image` + galerie des images de l'article, alternative à MonitoRSS), `forbidden-word` (stub
+via `og:image` + galerie des images de l'article, alternative à MonitoRSS), `stream` (`/stream`, annonce de stream Twitch, jeux via Steam en français + IGDB optionnel, affichés au programme de `cine-club` ; réutilise les étapes de formulaire, présences et rappels de `cine-club`), `forbidden-word` (stub
 vide, pas encore implémenté).
 
 ## Conventions

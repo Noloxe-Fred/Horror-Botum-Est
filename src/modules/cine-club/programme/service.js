@@ -1,11 +1,11 @@
 // Programme des Séances Ciné en image : liste toutes les séances annoncées
-// (cine-club-annonces) pas encore commencées, rendue en PNG (render.js) et
+// (cine-club-annonces) et les streams (stream-annonces) pas encore commencés, rendue en PNG (render.js) et
 // affichée dans CINE_CLUB_CHANNEL_PROGRAMME_ID — une image d'en-tête puis une
 // image par séance, un message par image, édités sur place à chaque
 // changement plutôt que reposter.
 //
-// Mise à jour automatique : chaque branche de /cine (et /supprimer-seance)
-// appelle rafraichirProgramme() dès la séance enregistrée, et un tick par
+// Mise à jour automatique : chaque branche de /cine, /stream (et leurs
+// commandes de suppression) appelle rafraichirProgramme() dès la séance enregistrée, et un tick par
 // minute rattrape le reste (séance commencée...). Les deux comparent la liste
 // des séances à venir avec celle de la dernière publication (signature) et
 // ne régénèrent que si elle a changé. Inactif tant que /programme-cine n'a
@@ -14,6 +14,7 @@
 const { AttachmentBuilder } = require('discord.js');
 const config = require('../../../config');
 const store = require('../store');
+const streamStore = require('../../stream/store');
 const { rendreProgramme, rendreProgrammeParSeance } = require('./render');
 
 const INTERVALLE_MS = 60 * 1000;
@@ -43,6 +44,19 @@ function enFile(tache) {
   file = resultat.catch(() => {});
   return resultat;
 }
+
+// Séances /cine et streams /stream à venir, mêlés par date. La fiche d'un jeu
+// est ramenée au format d'une fiche TMDB (posterUrl).
+function annoncesAuProgramme() {
+  const streams = streamStore.listAnnoncesAVenir().map((a) => ({
+    ...a,
+    mediaType: 'game',
+    fiche: { ...a.fiche, posterUrl: a.fiche.coverUrl },
+  }));
+  return [...store.listAnnoncesAVenir(), ...streams].sort((a, b) => new Date(a.dateSeance) - new Date(b.dateSeance));
+}
+
+const LIBELLES_TYPE = { movie: 'Film', tv: 'Série', game: 'Jeu vidéo' };
 
 // Tout ce qui est affiché change la signature : une séance supprimée puis
 // reprogrammée au même créneau (même sessionKey) avec d'autres épisodes
@@ -91,7 +105,7 @@ async function preparerSeances(annonces) {
   return Promise.all(
     annonces.map(async (a) => ({
       titre: a.fiche.titre,
-      type: a.mediaType === 'tv' ? 'Série' : 'Film',
+      type: LIBELLES_TYPE[a.mediaType] || 'Film',
       annee: a.fiche.dateSortie ? a.fiche.dateSortie.slice(0, 4) : null,
       synopsis: a.fiche.overview || '',
       episodes: preparerEpisodes(a.episodes),
@@ -145,7 +159,7 @@ async function mettreAJourMessages(channel, anciensIds, fichiers) {
  * rappel hebdomadaire (rappel-hebdo.js). Renvoie { annonces, buffers }.
  */
 async function genererImagesProgramme({ parSeance = false } = {}) {
-  const annonces = store.listAnnoncesAVenir();
+  const annonces = annoncesAuProgramme();
   const rendre = parSeance ? rendreProgrammeParSeance : rendreProgramme;
   const buffers = await rendre(await preparerSeances(annonces));
   return { annonces, buffers };
@@ -208,7 +222,7 @@ function publierProgramme(client, { forcer = false } = {}) {
 async function rafraichirProgramme(client) {
   const etat = store.getProgramme();
   if (!etat.messageIds || etat.messageIds.length === 0) return false; // jamais lancé
-  if (signature(store.listAnnoncesAVenir()) === etat.signature) return false;
+  if (signature(annoncesAuProgramme()) === etat.signature) return false;
 
   try {
     await publierProgramme(client);

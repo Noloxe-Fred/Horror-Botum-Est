@@ -1,7 +1,7 @@
 // Rappel hebdomadaire du programme : chaque dimanche à 18h (heure de Paris,
 // TZ forcé par config), poste dans CINE_CLUB_CHANNEL_DISCUTE_ID ("la-discute")
-// le programme en image avec mention du rôle Séances Ciné, suivi d'une ligne
-// de texte. Message Components V2 : mention, galerie d'images, texte — seul
+// le programme en image avec mention du rôle Séances Ciné s'il y a une séance
+// et du rôle Jeux vidéo s'il y a un stream, suivi d'une ligne de texte. Message Components V2 : mention, galerie d'images, texte — seul
 // moyen d'avoir le texte SOUS les images dans un même message.
 //
 // Tick par minute ; la date du dernier envoi est persistée pour n'envoyer
@@ -32,6 +32,14 @@ function dateDuJour(maintenant) {
   return `${maintenant.getFullYear()}-${deuxChiffres(maintenant.getMonth() + 1)}-${deuxChiffres(maintenant.getDate())}`;
 }
 
+// Un rôle n'est mentionné que si le programme contient quelque chose pour lui.
+function rolesAMentionner(annonces) {
+  const ids = [];
+  if (annonces.some((a) => a.mediaType !== 'game')) ids.push(config.cineClub.roles.seancesCine);
+  if (annonces.some((a) => a.mediaType === 'game')) ids.push(config.stream.roleId);
+  return ids.filter(Boolean);
+}
+
 async function envoyerRappelHebdo(client) {
   const { annonces, buffers } = await genererImagesProgramme();
   if (annonces.length === 0) {
@@ -46,9 +54,9 @@ async function envoyerRappelHebdo(client) {
     fichiers.map((f) => new MediaGalleryItemBuilder().setURL(`attachment://${f.name}`))
   );
 
-  const roleId = config.cineClub.roles.seancesCine;
+  const mentions = rolesAMentionner(annonces).map((id) => `<@&${id}>`);
   const components = [];
-  if (roleId) components.push(new TextDisplayBuilder().setContent(`<@&${roleId}>`));
+  if (mentions.length) components.push(new TextDisplayBuilder().setContent(mentions.join(' ')));
   components.push(galerie, new TextDisplayBuilder().setContent(TEXTE));
 
   const channel = await client.channels.fetch(config.cineClub.channelDiscuteId);

@@ -34,7 +34,7 @@ function ceSoirA(heure, minute = 0, from = new Date()) {
 }
 
 /**
- * Les `nb` prochains jours calendaires à partir de demain (00:00), pour le
+ * Les `nb` prochains jours calendaires à partir d'aujourd'hui (00:00), pour le
  * choix de date des séances (voir service.demanderJour). setDate() plutôt
  * que + n jours en millisecondes pour rester juste lors des changements
  * d'heure été/hiver.
@@ -43,7 +43,7 @@ function prochainsJours(nb, from = new Date()) {
   return Array.from({ length: nb }, (_, i) => {
     const d = new Date(from);
     d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i + 1);
+    d.setDate(d.getDate() + i);
     return d;
   });
 }

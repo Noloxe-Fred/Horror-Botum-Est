@@ -18,7 +18,7 @@ const config = require('../../config');
 const { requireStreamerRole } = require('../../core/permissions');
 const store = require('./store');
 const tmdb = require('./tmdb');
-const { formatDateFr, formatJourFr, parseHeure, prochainsJours } = require('./dateUtils');
+const { atHeure, formatDateFr, formatJourFr, parseHeure, prochainsJours } = require('./dateUtils');
 
 const COULEUR_FILM = 0xb8002e; // rouge horreur, cohérent avec le thème du serveur
 const COULEUR_SERIE = 0x1f8a70;
@@ -319,11 +319,13 @@ async function demanderSalonVocal(interaction, message) {
  * modale (un select menu ne permet pas la saisie libre nécessaire ici).
  * Réutilisé par les branches "Séances Séries" et "Séance Libre" de /cine.
  *
+ * `jour` : date choisie, pour refuser une heure déjà passée si c'est aujourd'hui.
+ *
  * Renvoie { heure, minute }, ou `null` en cas d'annulation/timeout/format
  * invalide (message d'erreur déjà posté dans `message`, l'appelant doit
  * juste s'arrêter).
  */
-async function demanderHeure(interaction, message, { defaut = '20h45', label = "l'heure de diffusion" } = {}) {
+async function demanderHeure(interaction, message, { defaut = '20h45', label = "l'heure de diffusion", jour = null } = {}) {
   const boutonId = 'heure_ouvrir_modal';
 
   await interaction.editReply({
@@ -375,6 +377,14 @@ async function demanderHeure(interaction, message, { defaut = '20h45', label = "
   if (!heureParsee) {
     await interaction.editReply({
       content: `❌ Heure invalide ("${brut}"), commande annulée. Utilise un format du type "21h" ou "21h30".`,
+      components: [],
+    });
+    return null;
+  }
+
+  if (jour && atHeure(jour, heureParsee.heure, heureParsee.minute).getTime() <= Date.now()) {
+    await interaction.editReply({
+      content: `❌ ${brut} est déjà passé aujourd'hui, commande annulée.`,
       components: [],
     });
     return null;
@@ -521,12 +531,12 @@ async function selectionnerDansWatchlist(interaction, message, entrees) {
   }
 }
 
-const NB_JOURS_PROPOSES = 21; // 3 semaines (un select Discord accepte 25 options max)
+const NB_JOURS_PROPOSES = 22; // aujourd'hui + 3 semaines (un select Discord accepte 25 options max)
 
 /**
  * Demande le jour de la séance parmi les NB_JOURS_PROPOSES prochains jours
- * (à partir de demain). Utilisé par les branches "Séance Libre" et
- * "Séances Séries".
+ * (à partir d'aujourd'hui). Utilisé par les branches "Séance Libre" et
+ * "Séances Séries" et par /stream.
  *
  * Renvoie la date choisie (00:00), ou `null` en cas d'annulation/timeout
  * (message d'erreur déjà posté dans `message`, l'appelant doit juste
@@ -537,7 +547,9 @@ async function demanderJour(interaction, message) {
   const select = new StringSelectMenuBuilder()
     .setCustomId('seance_jour')
     .setPlaceholder('Jour de la séance')
-    .addOptions(jours.map((j, i) => ({ label: formatJourFr(j), value: String(i) })));
+    .addOptions(
+      jours.map((j, i) => ({ label: `${i === 0 ? "Aujourd'hui — " : ''}${formatJourFr(j)}`, value: String(i) }))
+    );
 
   await interaction.editReply({
     content: 'Quel jour ?',

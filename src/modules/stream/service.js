@@ -123,12 +123,12 @@ function buildStreamContainer({
 }
 
 /**
- * Laisse choisir le bon jeu parmi les résultats. Renvoie le jeu choisi,
- * ou `null` après timeout (message d'erreur déjà posté dans `message`).
+ * Laisse choisir le bon jeu parmi les résultats, même s'il n'y en a qu'un :
+ * la recherche étant tolérante, ce n'est pas forcément le jeu demandé. Renvoie
+ * le jeu choisi, ou `null` après timeout (message d'erreur déjà posté dans
+ * `message`).
  */
 async function choisirJeu(interaction, message, resultats) {
-  if (resultats.length === 1) return resultats[0];
-
   const select = new StringSelectMenuBuilder()
     .setCustomId('stream_jeu')
     .setPlaceholder('Choisis le bon jeu')
@@ -144,7 +144,7 @@ async function choisirJeu(interaction, message, resultats) {
     );
 
   await interaction.editReply({
-    content: `🔎 ${resultats.length} résultats trouvés — quel jeu ?`,
+    content: `🔎 ${resultats.length} résultat${resultats.length > 1 ? 's' : ''} — quel jeu ?`,
     components: [new ActionRowBuilder().addComponents(select)],
   });
 

@@ -5,6 +5,7 @@
 const BASE_URL = 'https://store.steampowered.com/api';
 const IMG_BASE = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps';
 const TIMEOUT_MS = 10 * 1000;
+const MIN_LONGUEUR_TERME = 4; // en deçà ("the"), les résultats n'ont plus de rapport
 
 const ENTITES = { '&amp;': '&', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' };
 
@@ -69,14 +70,36 @@ async function details(appId) {
 }
 
 /**
- * Recherche un jeu par titre. La recherche mélange jeux, DLC et bandes-son
- * sans indiquer le type : seule la fiche de chaque résultat permet de ne
- * garder que les jeux.
+ * La recherche mélange jeux, DLC et bandes-son sans indiquer le type : seule
+ * la fiche de chaque résultat permet de ne garder que les jeux.
+ */
+async function chercherTermes(termes) {
+  const reponses = await Promise.all(termes.map((term) => steamFetch('/storesearch/', { term })));
+  const ids = [...new Set(reponses.flatMap(({ items = [] }) => items.map((item) => item.id)))];
+  const fiches = await Promise.all(ids.map(details));
+  return Promise.all(fiches.filter((f) => f && f.type === 'game').map(normalize));
+}
+
+/**
+ * Recherche un jeu par titre. Steam exige tous les mots saisis et n'en tolère
+ * aucun en trop : "Dying Light 1" (le jeu s'appelle "Dying Light") ou "alien :
+ * isolation" ne trouvent pas le jeu. On cherche donc aussi sans le "1" final
+ * ni la ponctuation, puis, si rien ne sort (faute de frappe...), en retirant
+ * les derniers mots un à un.
  */
 async function rechercher(titre) {
-  const { items = [] } = await steamFetch('/storesearch/', { term: titre });
-  const fiches = await Promise.all(items.map((item) => details(item.id)));
-  return Promise.all(fiches.filter((f) => f && f.type === 'game').map(normalize));
+  const nettoye = titre.replace(/[:;,!?–—-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const sansNumero = nettoye.replace(/\s+(?:1|i)$/i, '');
+  const termes = [...new Set([sansNumero, nettoye, titre])].filter(Boolean);
+
+  let jeux = await chercherTermes(termes);
+
+  const mots = sansNumero.split(' ');
+  for (let n = mots.length - 1; jeux.length === 0 && n >= 1; n--) {
+    const debut = mots.slice(0, n).join(' ');
+    if (debut.length >= MIN_LONGUEUR_TERME) jeux = await chercherTermes([debut]);
+  }
+  return jeux;
 }
 
 module.exports = { rechercher };

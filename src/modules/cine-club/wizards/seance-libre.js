@@ -29,7 +29,7 @@ const {
 
 /**
  * Branche "Séance Libre" de /cine — programme un film à une date libre
- * parmi les 3 prochaines semaines (à partir de demain, voir demanderJour), à une heure
+ * parmi les 3 prochaines semaines (à partir d'aujourd'hui, voir demanderJour), à une heure
  * libre. Film choisi soit dans la watchlist, soit via une recherche TMDB
  * libre. Rôle à mentionner (Séances Cinés / Ciné Classiques / Courts
  * Métrages) choisi par le streamer, comme /host.
@@ -82,6 +82,7 @@ async function runSeanceLibreWizard(interaction, message) {
   const heureChoisie = await demanderHeure(interaction, message, {
     defaut: '20h45',
     label: `l'heure de diffusion (${formatJourFr(jourChoisi)})`,
+    jour: jourChoisi,
   });
   if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
   const dateSeance = atHeure(jourChoisi, heureChoisie.heure, heureChoisie.minute);

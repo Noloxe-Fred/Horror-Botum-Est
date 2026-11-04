@@ -179,6 +179,7 @@ async function runSeriesWizard(interaction, clicBouton, message) {
   const heureChoisie = await demanderHeure(interaction, message, {
     defaut: '20h45',
     label: `l'heure de diffusion (${formatJourFr(jourChoisi)})`,
+    jour: jourChoisi,
   });
   if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
   const dateSeance = atHeure(jourChoisi, heureChoisie.heure, heureChoisie.minute);

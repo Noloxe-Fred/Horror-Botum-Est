@@ -1,6 +1,8 @@
 const steam = require('./steam');
 const igdb = require('./igdb');
 
+const MAX_OPTIONS_SELECT = 25; // limite Discord d'un select menu
+
 function cleDoublon(jeu) {
   const titre = jeu.titre.toLowerCase().replace(/[^a-z0-9]/g, '');
   return `${titre}:${(jeu.dateSortie || '').slice(0, 4)}`;
@@ -31,7 +33,8 @@ async function rechercherJeux(titre) {
       if (vus.has(cle)) return false;
       vus.add(cle);
       return true;
-    });
+    })
+    .slice(0, MAX_OPTIONS_SELECT);
 }
 
 module.exports = { rechercherJeux };

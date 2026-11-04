@@ -50,6 +50,7 @@ module.exports = {
     const heureChoisie = await demanderHeure(interaction, message, {
       defaut: '20h30',
       label: `l'heure du stream (${formatJourFr(jourChoisi)})`,
+      jour: jourChoisi,
     });
     if (!heureChoisie) return; // message d'erreur/timeout déjà posté par demanderHeure
     const dateSeance = atHeure(jourChoisi, heureChoisie.heure, heureChoisie.minute);
